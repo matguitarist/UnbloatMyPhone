@@ -10,7 +10,7 @@ public sealed partial class BackupItem(Backup backup) : ObservableObject
 {
     public Backup Backup { get; } = backup;
     public string When => Backup.CreatedText;
-    public string Summary => Loc.Format("Restore_Summary", Backup.DisabledPackages.Count, Backup.Settings.Count);
+    public string Summary => Loc.Format("Restore_Summary", Backup.DisabledPackages.Count, Backup.Settings.Count, Backup.RevokedPermissions.Count);
     public void Refresh() => OnPropertyChanged(nameof(Summary));
 }
 
@@ -47,7 +47,7 @@ public sealed partial class RestoreViewModel : PageViewModel
         foreach (var b in Backups) b.Refresh();
     }
 
-    /// <summary>Undo one run: re-enable its apps and put every setting back as it was.</summary>
+    /// <summary>Undo one run: re-enable its apps, put every setting back as it was, and give back removed accesses.</summary>
     [RelayCommand]
     private async Task RestoreAsync(BackupItem item)
     {
@@ -62,6 +62,8 @@ public sealed partial class RestoreViewModel : PageViewModel
                 await SettingsIO.RestoreAsync(adb, serial, s.Namespace, s.Key, s.OldValue);
             foreach (var pkg in b.EnabledPackages)
                 await adb.ShellAsync(serial, $"pm disable-user --user 0 {pkg}");
+            foreach (var p in b.RevokedPermissions)
+                await adb.ShellAsync(serial, $"pm grant --user 0 {p.Package} {p.Permission}");
 
             // Keep the file for reference, but stop offering it.
             File.Move(b.FilePath, b.FilePath.Replace("changes-", "restored-"), true);

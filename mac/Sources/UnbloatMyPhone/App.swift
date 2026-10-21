@@ -49,7 +49,9 @@ struct ContentView: View {
                 case .choose: if let c = model.choose { ChooseView(choose: c) }
                 case .apply: if let a = model.apply { ApplyView(apply: a) }
                 case .restore: if let r = model.restore { RestoreView(restore: r) }
+                case .info: if let i = model.info { PhoneInfoView(info: i) }
                 case .health: if let h = model.health { HealthView(health: h) }
+                case .privacy: if let p = model.privacy { PrivacyView(privacy: p) }
                 case .install: if let i = model.install { InstallView(install: i) }
                 }
             }
@@ -115,19 +117,23 @@ struct Sidebar: View {
 
 extension Sidebar {
     private static let tools: [(tag: Int, key: String, icon: String, page: Page)] = [
+        (9, "Side_Info", "info.circle", .info),
         (10, "Side_Health", "waveform.path.ecg", .health),
+        (11, "Side_Privacy", "hand.raised", .privacy),
         (12, "Side_Install", "square.and.arrow.down", .install),
         (13, "Side_Restore", "arrow.uturn.backward", .restore),
     ]
 
-    /// Steps are tagged 0-3, tools 10 and up.
+    /// Steps are tagged 0-3, tools 9 and up.
     private var selection: Binding<Int?> {
         Binding(
             get: { Self.tools.first { $0.page == model.page }?.tag ?? min(model.stepIndex, 3) },
             set: { tag in
                 guard let tag else { return }
                 switch Self.tools.first(where: { $0.tag == tag })?.page {
+                case .info: model.goInfo()
                 case .health: model.goHealth()
+                case .privacy: model.goPrivacy()
                 case .install: model.goInstall()
                 case .restore: model.goRestore()
                 default: model.go(toStep: tag)

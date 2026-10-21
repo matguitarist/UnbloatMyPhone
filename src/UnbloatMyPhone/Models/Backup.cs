@@ -15,6 +15,13 @@ public sealed class SettingChange
     public string NewValue { get; set; } = "";
 }
 
+/// <summary>An access removed in the privacy check-up; Restore gives it back.</summary>
+public sealed class PermissionChange
+{
+    public string Package { get; set; } = "";
+    public string Permission { get; set; } = "";
+}
+
 /// <summary>Everything one run changed, with the original values, so it can be undone exactly.</summary>
 public sealed class Backup
 {
@@ -26,9 +33,10 @@ public sealed class Backup
     /// <summary>Apps a choice turned back on; Restore turns them off again.</summary>
     public List<string> EnabledPackages { get; set; } = [];
     public List<SettingChange> Settings { get; set; } = [];
+    public List<PermissionChange> RevokedPermissions { get; set; } = [];
 
     [JsonIgnore] public string FilePath { get; set; } = "";
-    [JsonIgnore] public int ChangeCount => DisabledPackages.Count + EnabledPackages.Count + Settings.Count;
+    [JsonIgnore] public int ChangeCount => DisabledPackages.Count + EnabledPackages.Count + Settings.Count + RevokedPermissions.Count;
     [JsonIgnore] public string CreatedText => Created.ToString("g", Loc.Culture);
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };

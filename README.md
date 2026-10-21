@@ -55,6 +55,11 @@ Every version updates itself: it shows what's new and installs the update in a f
 - **Turns debugging off for you** when you are done.
 
 **Tools**
+- **Privacy check-up**: which apps can use your location (and "all the time"), microphone, camera,
+  contacts, text messages, call log and calendar. Remove an access in one click; Restore gives it back.
+- **Phone info**: Android version, how old the security update is, the beta and how to leave it
+  without losing anything, bootloader and verified boot. Opens System update or the reset screen
+  on the phone, and restarts it normally, into recovery or into bootloader mode (after asking).
 - **Health check**: memory, storage, processor, the apps using the most memory, and apps stuck in a
   crash loop, with plain advice. Read-only.
 - **Install an app**: drop an `.apk` on the window.

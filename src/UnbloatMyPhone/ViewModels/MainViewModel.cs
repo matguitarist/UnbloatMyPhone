@@ -67,12 +67,14 @@ public sealed partial class MainViewModel : ObservableObject
     {
         oldValue?.OnLeave();
         RefreshSteps();
-        foreach (var name in new[] { nameof(OnHealth), nameof(OnInstall), nameof(OnRestore) })
+        foreach (var name in new[] { nameof(OnInfo), nameof(OnHealth), nameof(OnPrivacy), nameof(OnInstall), nameof(OnRestore) })
             OnPropertyChanged(name);
     }
 
     // Which sidebar tool is open, to mark it.
+    public bool OnInfo => CurrentPage is PhoneInfoViewModel;
     public bool OnHealth => CurrentPage is HealthViewModel;
+    public bool OnPrivacy => CurrentPage is PrivacyViewModel;
     public bool OnInstall => CurrentPage is InstallViewModel;
     public bool OnRestore => CurrentPage is RestoreViewModel;
 
@@ -86,7 +88,7 @@ public sealed partial class MainViewModel : ObservableObject
             s.IsActive = s.Number - 1 == CurrentPage.StepIndex;
             s.IsDone = s.Number - 1 < CurrentPage.StepIndex;
             // From a tool page (also step 3), "Choose" leads back to the list.
-            var onTool = CurrentPage is HealthViewModel or InstallViewModel or RestoreViewModel;
+            var onTool = CurrentPage is PhoneInfoViewModel or HealthViewModel or PrivacyViewModel or InstallViewModel or RestoreViewModel;
             s.CanNavigate = (s.IsDone || (s.Number == 3 && onTool)) && !IsBusy && s.Number < 4 && (s.Number != 3 || HasDevice);
         }
     }
@@ -141,6 +143,18 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand(CanExecute = nameof(HasDevice))]
+    private void GoInfo()
+    {
+        if (Device is not null && !IsBusy) CurrentPage = new PhoneInfoViewModel(this, Device);
+    }
+
+    [RelayCommand(CanExecute = nameof(HasDevice))]
+    private void GoPrivacy()
+    {
+        if (Device is not null && !IsBusy) CurrentPage = new PrivacyViewModel(this, Device);
+    }
+
+    [RelayCommand(CanExecute = nameof(HasDevice))]
     private void GoHealth()
     {
         if (Device is not null && !IsBusy) CurrentPage = new HealthViewModel(this, Device);
@@ -155,7 +169,9 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnDeviceChanged(PhoneDevice? value)
     {
         GoRestoreCommand.NotifyCanExecuteChanged();
+        GoInfoCommand.NotifyCanExecuteChanged();
         GoHealthCommand.NotifyCanExecuteChanged();
+        GoPrivacyCommand.NotifyCanExecuteChanged();
         GoInstallCommand.NotifyCanExecuteChanged();
         RefreshSteps();
     }

@@ -14,6 +14,14 @@ struct SettingChange: Codable {
     }
 }
 
+/// An access removed in the privacy check-up; Restore gives it back.
+struct PermissionChange: Codable {
+    var package: String
+    var permission: String
+
+    enum CodingKeys: String, CodingKey { case package = "Package", permission = "Permission" }
+}
+
 /// Everything one run changed, with the original values, so it can be undone exactly.
 /// Files are interchangeable with the Windows/Linux app.
 final class Backup: Codable {
@@ -25,15 +33,17 @@ final class Backup: Codable {
     /// Apps a choice turned back on; Restore turns them off again.
     var enabledPackages: [String] = []
     var settings: [SettingChange] = []
+    var revokedPermissions: [PermissionChange] = []
 
     var fileURL: URL = URL(fileURLWithPath: "/")
 
     enum CodingKeys: String, CodingKey {
         case created = "Created", deviceName = "DeviceName", serialNo = "SerialNo", androidVersion = "AndroidVersion"
         case disabledPackages = "DisabledPackages", enabledPackages = "EnabledPackages", settings = "Settings"
+        case revokedPermissions = "RevokedPermissions"
     }
 
-    // Older backups have no EnabledPackages.
+    // Older backups have no EnabledPackages or RevokedPermissions.
     required init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         created = try c.decode(String.self, forKey: .created)
@@ -43,6 +53,7 @@ final class Backup: Codable {
         disabledPackages = try c.decodeIfPresent([String].self, forKey: .disabledPackages) ?? []
         enabledPackages = try c.decodeIfPresent([String].self, forKey: .enabledPackages) ?? []
         settings = try c.decodeIfPresent([SettingChange].self, forKey: .settings) ?? []
+        revokedPermissions = try c.decodeIfPresent([PermissionChange].self, forKey: .revokedPermissions) ?? []
     }
 
     init(device: PhoneDevice) {
@@ -52,7 +63,7 @@ final class Backup: Codable {
         androidVersion = device.androidVersion
     }
 
-    var changeCount: Int { disabledPackages.count + enabledPackages.count + settings.count }
+    var changeCount: Int { disabledPackages.count + enabledPackages.count + settings.count + revokedPermissions.count }
     var createdDate: Date { DateText.parse(created) ?? .distantPast }
     var createdText: String { DateText.display(created) }
 

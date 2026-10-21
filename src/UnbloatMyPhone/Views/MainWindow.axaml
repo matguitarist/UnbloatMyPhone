@@ -16,7 +16,9 @@
     <DataTemplate DataType="vm:ChooseViewModel"><v:ChooseView /></DataTemplate>
     <DataTemplate DataType="vm:ApplyViewModel"><v:ApplyView /></DataTemplate>
     <DataTemplate DataType="vm:RestoreViewModel"><v:RestoreView /></DataTemplate>
+    <DataTemplate DataType="vm:PhoneInfoViewModel"><v:PhoneInfoView /></DataTemplate>
     <DataTemplate DataType="vm:HealthViewModel"><v:HealthView /></DataTemplate>
+    <DataTemplate DataType="vm:PrivacyViewModel"><v:PrivacyView /></DataTemplate>
     <DataTemplate DataType="vm:InstallViewModel"><v:InstallView /></DataTemplate>
   </Window.DataTemplates>
 
@@ -137,10 +139,22 @@
           </Border>
 
           <StackPanel Spacing="10" IsVisible="{Binding HasDevice}">
+            <Button Classes="link tool" Classes.current="{Binding OnInfo}" Command="{Binding GoInfoCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="9">
+                <Path Data="M12 3 A9 9 0 1 1 11.99 3 Z M12 11 V16.5 M12 7.5 V7.6" />
+                <TextBlock Text="{l:T Side_Info}" />
+              </StackPanel>
+            </Button>
             <Button Classes="link tool" Classes.current="{Binding OnHealth}" Command="{Binding GoHealthCommand}">
               <StackPanel Orientation="Horizontal" Spacing="9">
                 <Path Data="M3 12 H7 L10 5 L14 19 L17 12 H21" />
                 <TextBlock Text="{l:T Side_Health}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="link tool" Classes.current="{Binding OnPrivacy}" Command="{Binding GoPrivacyCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="9">
+                <Path Data="M12 3 L19 6 V11 C19 15.5 16 19 12 21 C8 19 5 15.5 5 11 V6 Z" />
+                <TextBlock Text="{l:T Side_Privacy}" />
               </StackPanel>
             </Button>
             <Button Classes="link tool" Classes.current="{Binding OnInstall}" Command="{Binding GoInstallCommand}">

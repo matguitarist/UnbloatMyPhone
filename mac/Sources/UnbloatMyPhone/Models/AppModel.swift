@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import Observation
 
-enum Page { case welcome, connect, choose, apply, restore, health, install }
+enum Page { case welcome, connect, choose, apply, restore, info, health, privacy, install }
 
 /// The whole app's state: which page is showing, the connected phone, and each page's model.
 @MainActor @Observable
@@ -16,7 +16,9 @@ final class AppModel {
     var choose: ChooseModel?
     var apply: ApplyModel?
     var restore: RestoreModel?
+    var info: PhoneInfoModel?
     var health: HealthModel?
+    var privacy: PrivacyModel?
     var install: InstallModel?
 
     init() {
@@ -29,7 +31,7 @@ final class AppModel {
         switch page {
         case .welcome: 0
         case .connect: 1
-        case .choose, .restore, .health, .install: 2
+        case .choose, .restore, .info, .health, .privacy, .install: 2
         case .apply: apply?.isFinished == true ? 4 : 3
         }
     }
@@ -41,7 +43,7 @@ final class AppModel {
 
     func canNavigate(toStep n: Int) -> Bool {
         // From a tool page (step 3 too), "Choose" leads back to the list.
-        let onTool = [.restore, .health, .install].contains(page)
+        let onTool = [.restore, .info, .health, .privacy, .install].contains(page)
         return (n < stepIndex || (n == 2 && onTool)) && !isBusy && n < 3 && (n != 2 || device != nil)
     }
 
@@ -84,6 +86,18 @@ final class AppModel {
         guard let dev = device, !isBusy else { return }
         restore = RestoreModel(app: self, device: dev)
         page = .restore
+    }
+
+    func goInfo() {
+        guard let dev = device, !isBusy else { return }
+        info = PhoneInfoModel(app: self, device: dev)
+        page = .info
+    }
+
+    func goPrivacy() {
+        guard let dev = device, !isBusy else { return }
+        privacy = PrivacyModel(device: dev)
+        page = .privacy
     }
 
     func goHealth() {
@@ -272,8 +286,10 @@ final class ConnectModel {
         app.device = await PhoneDevice.load(adb, serial: serial)
         stopWatching()
         await app.goChoose()
-        // Development aid, with UMP_CONNECT: UMP_PAGE=health|install|restore opens a tool page (read-only).
+        // Development aid, with UMP_CONNECT: UMP_PAGE=info|health|privacy|install|restore opens a tool page (read-only).
         switch ProcessInfo.processInfo.environment["UMP_PAGE"] {
+        case "info": app.goInfo()
+        case "privacy": app.goPrivacy()
         case "health": app.goHealth()
         case "install": app.goInstall()
         case "restore": app.goRestore()
@@ -687,15 +703,16 @@ final class RestoreModel {
     }
 
     func summary(_ b: Backup) -> String {
-        L("Restore_Summary", b.disabledPackages.count, b.settings.count)
+        L("Restore_Summary", b.disabledPackages.count, b.settings.count, b.revokedPermissions.count)
     }
 
-    /// Undo one run: re-enable its apps and put every setting back as it was.
+    /// Undo one run: re-enable its apps, put every setting back as it was, and give back removed accesses.
     func restore(_ b: Backup) async {
         await runBusy { adb, serial in
             for pkg in b.disabledPackages { _ = await adb.shell(serial, "pm enable --user 0 \(pkg)") }
             for s in b.settings.reversed() { await SettingsIO.restore(adb, serial, s.namespace, s.key, s.oldValue) }
             for pkg in b.enabledPackages { _ = await adb.shell(serial, "pm disable-user --user 0 \(pkg)") }
+            for p in b.revokedPermissions { _ = await adb.shell(serial, "pm grant --user 0 \(p.package) \(p.permission)") }
             // Keep the file for reference, but stop offering it.
             let renamed = b.fileURL.deletingLastPathComponent()
                 .appendingPathComponent(b.fileURL.lastPathComponent.replacingOccurrences(of: "changes-", with: "restored-"))

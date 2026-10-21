@@ -55,6 +55,13 @@ Chaque version se met à jour seule : elle affiche les nouveautés et installe l
 - **Désactive le débogage pour vous** une fois terminé.
 
 **Outils**
+- **Bilan de confidentialité** : quelles applications peuvent utiliser votre position (et « en
+  permanence »), le micro, l'appareil photo, les contacts, les SMS, le journal d'appels et l'agenda.
+  Retirez un accès en un clic ; Restaurer le rend.
+- **Infos du téléphone** : version d'Android, âge de la mise à jour de sécurité, la bêta et comment la
+  quitter sans rien perdre, bootloader et démarrage validé. Ouvre Mise à jour du système ou l'écran de
+  réinitialisation sur le téléphone, et le redémarre normalement, en mode récupération ou en mode
+  bootloader (après confirmation).
 - **Bilan de santé** : mémoire, stockage, processeur, les applications qui occupent le plus de
   mémoire et celles qui plantent en boucle, avec des conseils clairs. Lecture seule.
 - **Installer une application** : déposez un `.apk` sur la fenêtre.
