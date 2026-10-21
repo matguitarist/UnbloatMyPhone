@@ -137,6 +137,7 @@ dotnet publish src/UnbloatMyPhone -c Release -r win-x64 -o publish    # single W
 linux/build-appimage.sh                                               # AppImage (on Linux)
 mac/build-app.sh                                                      # Mac app
 python3 tools/gen-mac-strings.py                                      # after changing Strings.cs
+dotnet run --project tools/Screenshots -- docs                       # README screenshots (made-up phone)
 ```
 
 **Changing the list.** Each entry has a package `id` (or a `prefix`), a `group`, `recommended`, and
