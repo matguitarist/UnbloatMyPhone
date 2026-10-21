@@ -82,7 +82,16 @@ private struct AppRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 12) {
+                Group {
+                    if let icon = row.icon {
+                        Image(nsImage: icon).resizable().interpolation(.high)
+                    } else {
+                        RoundedRectangle(cornerRadius: 8).fill(.quaternary)
+                    }
+                }
+                .frame(width: 36, height: 36)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(row.name).lineLimit(1).truncationMode(.middle)
                     if row.hasFriendlyName {
@@ -134,7 +143,7 @@ private struct AppRowView: View {
             Button(L("Apps_Open")) { Task { await apps.run(row, "Apps_Opened", UserApps.open) } }.disabled(!row.canOpen)
             Button(L("Apps_ShowInfo")) { Task { await apps.run(row, "Apps_InfoOpened", UserApps.showInfo) } }
             Button(L("Apps_Stop")) { Task { await apps.run(row, "Apps_Stopped", UserApps.stop) } }.disabled(!row.canStop)
-            Button(L("Apps_NameMenu")) { apps.askName(row) }
+            if row.canName { Button(L("Apps_NameMenu")) { apps.askName(row) } }
             Divider()
             if row.app.isEnabled {
                 Button(L("Apps_TurnOff")) { Task { await apps.setEnabled(row, on: false) } }.disabled(!row.canTurnOff)

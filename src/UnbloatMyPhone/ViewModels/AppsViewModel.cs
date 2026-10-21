@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
 using UnbloatMyPhone.Localization;
 using UnbloatMyPhone.Models;
 using UnbloatMyPhone.Services;
@@ -32,8 +33,24 @@ public sealed partial class AppRow : ObservableObject
 
     /// <summary>What the user is typing in "Name this app".</summary>
     [ObservableProperty] private string _nameDraft = "";
+    /// <summary>The icon as the phone draws it; null until it arrives, or when the phone can't give one.</summary>
+    [ObservableProperty] private Bitmap? _icon;
+    /// <summary>The name under its icon on the phone, when the phone gave one: it wins over the catalog and the user's names.</summary>
+    private string _phoneLabel = "";
     public string Package => App.Package;
     public bool HasFriendlyName => Name != Package;
+    public bool CanName => _phoneLabel.Length == 0;
+
+    public void SetFromPhone(PhoneIcons.Entry e)
+    {
+        _phoneLabel = e.Label == Package ? "" : e.Label;
+        Name = ResolveName();
+        OnPropertyChanged(nameof(CanName));
+        if (e.Png is { } png && Icon is null)
+            try { Icon = new Bitmap(new MemoryStream(png)); } catch { }
+    }
+
+    private string ResolveName() => _phoneLabel.Length > 0 ? _phoneLabel : Catalog.NameOf(Package) ?? Package;
     public bool IsProtected { get; }
     public bool IsOff => !App.IsEnabled && !IsGone;
 
@@ -133,7 +150,7 @@ public sealed partial class AppRow : ObservableObject
     private void SaveName()
     {
         LocalNames.Set(Package, NameDraft);
-        Name = Catalog.NameOf(Package) ?? Package;
+        Name = ResolveName();
         Pending = "";
         _page.NamesChanged();
     }
@@ -242,6 +259,21 @@ public sealed partial class AppsViewModel : PageViewModel
             IsLoading = false;
             Filter();
         }
+        await LoadIconsAsync();
+    }
+
+    /// <summary>Icons and names from the phone, after the list shows: they take a few seconds the first time.</summary>
+    private async Task LoadIconsAsync()
+    {
+        var rows = _all;
+        if (rows.Count == 0) return;
+        var found = await PhoneIcons.ReadAsync(Main.Adb, Device.Serial, rows.Select(r => r.App).ToList());
+        if (rows != _all || found.Count == 0) return;  // refreshed meanwhile
+        foreach (var r in rows)
+            if (found.TryGetValue(r.Package, out var e)) r.SetFromPhone(e);
+        // Re-sort by the real names, unless someone is in the middle of something on a row.
+        if (SortIndex == 0 && rows.All(r => r.Pending.Length == 0)) Filter();
+        else Counts();
     }
 
     /// <summary>

@@ -62,10 +62,12 @@ Every version updates itself: it shows what's new and installs the update in a f
   on the phone, and restarts it normally, into recovery or into bootloader mode (after asking).
 - **Health check**: memory, storage, processor, the apps using the most memory, and apps stuck in a
   crash loop, with plain advice. Read-only.
-- **My apps**: the apps you installed, with their size, version, install date and where they came
+- **My apps**: the apps you installed, with their icon and name as on your phone, their size, version, install date and where they came
   from (Google Play, a file, another store). Open, force stop, turn off (undo from Restore),
   archive (Android 15+, keeps the data) or uninstall each one.
   Name an app the list doesn't know, and share your names on GitHub so everyone gets them.
+  (For icons and names, a tiny helper is copied to the phone's temp folder, run once and deleted;
+  nothing is installed. Its source is in `helper/`.)
 - **Install an app**: drop an `.apk` on the window.
 
 Nothing is uninstalled: apps are switched off with Android's own `pm disable-user`, and a factory

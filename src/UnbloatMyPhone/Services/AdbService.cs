@@ -102,6 +102,9 @@ public sealed class AdbService
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            // adb speaks UTF-8; Windows would otherwise read it in the console's code page.
+            StandardOutputEncoding = System.Text.Encoding.UTF8,
+            StandardErrorEncoding = System.Text.Encoding.UTF8,
             UseShellExecute = false,
             CreateNoWindow = true,
         };

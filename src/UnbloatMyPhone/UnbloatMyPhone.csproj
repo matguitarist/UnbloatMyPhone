@@ -30,6 +30,7 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
     <EmbeddedResource Include="..\..\shared\catalog.json" LogicalName="catalog.json" Link="Data\catalog.json" />
+    <EmbeddedResource Include="..\..\helper\ump-helper.dex" LogicalName="ump-helper.dex" Link="Data\ump-helper.dex" />
   </ItemGroup>
 
   <ItemGroup>

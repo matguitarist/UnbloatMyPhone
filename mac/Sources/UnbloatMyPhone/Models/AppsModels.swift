@@ -9,6 +9,10 @@ final class AppRow: Identifiable {
     var name: String
     /// What the user is typing in "Name this app".
     var nameDraft = ""
+    /// The icon as the phone draws it; nil until it arrives, or when the phone can't give one.
+    var icon: NSImage?
+    /// The name under its icon on the phone, when the phone gave one: it wins over the catalog and the user's names.
+    private var phoneLabel = ""
     let isProtected: Bool
     /// "Apps_Uninstalled" or "Apps_Archived" once done; the row stays until the next refresh.
     var goneKey = ""
@@ -27,6 +31,15 @@ final class AppRow: Identifiable {
 
     var isGone: Bool { !goneKey.isEmpty }
     var hasFriendlyName: Bool { name != package }
+    var canName: Bool { phoneLabel.isEmpty }
+
+    func setFromPhone(_ e: PhoneIcons.Entry) {
+        phoneLabel = e.label == package ? "" : e.label
+        name = resolveName()
+        if icon == nil, let png = e.png { icon = NSImage(data: png) }
+    }
+
+    func resolveName() -> String { phoneLabel.isEmpty ? Catalog.name(of: package) ?? package : phoneLabel }
     var isConfirming: Bool { pending == "uninstall" || pending == "archive" }
     var isOff: Bool { !app.isEnabled && !isGone }
     private var ready: Bool { !isGone && !isWorking }
@@ -138,7 +151,7 @@ final class AppsModel {
 
     func saveName(_ row: AppRow) {
         LocalNames.set(row.package, row.nameDraft)
-        row.name = Catalog.name(of: row.package) ?? row.package
+        row.name = row.resolveName()
         row.pending = ""
         namesVersion += 1
     }
@@ -186,6 +199,16 @@ final class AppsModel {
         let apps = await UserApps.read(Adb.shared, serial: device.serial)
         rows = apps.map { AppRow(app: $0, isProtected: isNeeded($0)) }
         isLoading = false
+        await loadIcons()
+    }
+
+    /// Icons and names from the phone, after the list shows: they take a few seconds the first time.
+    private func loadIcons() async {
+        let current = rows
+        guard !current.isEmpty else { return }
+        let found = await PhoneIcons.read(Adb.shared, serial: device.serial, apps: current.map(\.app))
+        guard rows.map(\.id) == current.map(\.id) else { return }  // refreshed meanwhile
+        for r in current { if let e = found[r.package] { r.setFromPhone(e) } }
     }
 
     /// The home screen, keyboard, SMS app and so on, and the parts of Android that Google installs
