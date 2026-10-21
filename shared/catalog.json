@@ -1,7 +1,7 @@
 {
   "// schema": "Bump 'version' on every change: apps download this file from GitHub and use it when it is newer than their own copy. Bump 'schema' only for changes older apps can't read.",
   "schema": 1,
-  "version": 6,
+  "version": 7,
   "groups": [
     { "id": "telemetry", "title": { "en": "Tracking and diagnostics", "fr": "Pistage et diagnostics" },
       "description": { "en": "Background services that report how the phone is used, or collect logs for support. Nothing you use day to day depends on them.", "fr": "Services en arrière-plan qui signalent l'utilisation du téléphone ou collectent des journaux pour l'assistance. Rien de ce que vous utilisez au quotidien n'en dépend." } },
@@ -478,7 +478,25 @@
     { "id": "com.samsung.android.app.watchmanager", "name": { "en": "Galaxy Wearable", "fr": "Galaxy Wearable" } },
     { "id": "com.weather.Weather", "name": { "en": "The Weather Channel", "fr": "The Weather Channel" } },
     { "id": "com.accuweather.android", "name": { "en": "AccuWeather", "fr": "AccuWeather" } },
-    { "id": "com.nfctools.nfctagreader", "name": { "en": "NFC Tools", "fr": "NFC Tools" } }
+    { "id": "com.nfctools.nfctagreader", "name": { "en": "NFC Tools", "fr": "NFC Tools" } },
+    { "id": "ai.nomi.twa", "name": { "en": "Nomi", "fr": "Nomi" } },
+    { "id": "com.doubleangels.nextdnsmanagement", "name": { "en": "NextDNS Manager", "fr": "NextDNS Manager" } },
+    { "id": "com.gpl.rpg.AndorsTrail", "name": { "en": "Andor's Trail", "fr": "Andor's Trail" } },
+    { "id": "com.hairyharri.gameye", "name": { "en": "Gameye", "fr": "Gameye" } },
+    { "id": "com.halls.of.torment.paid.gp", "name": { "en": "Halls of Torment", "fr": "Halls of Torment" } },
+    { "id": "com.inspiredandroid.linuxcommandbibliotheca", "name": { "en": "Linux Command Library", "fr": "Linux Command Library" } },
+    { "id": "com.jgeek00.adguard_home_manager", "name": { "en": "AdGuard Home Manager", "fr": "AdGuard Home Manager" } },
+    { "id": "com.kevinforeman.nzb360", "name": { "en": "nzb360", "fr": "nzb360" } },
+    { "id": "com.ledvance.smartplus", "name": { "en": "LEDVANCE SMART+", "fr": "LEDVANCE SMART+" } },
+    { "id": "com.maxmpz.audioplayer.unlock", "name": { "en": "Poweramp Full Version Unlocker", "fr": "Déverrouillage de Poweramp" } },
+    { "id": "com.mcolotto.magicresearchfull", "name": { "en": "Magic Research", "fr": "Magic Research" } },
+    { "id": "com.playdigious.potionpermit", "name": { "en": "Potion Permit", "fr": "Potion Permit" } },
+    { "id": "com.tombursch.kitchenowl", "name": { "en": "KitchenOwl", "fr": "KitchenOwl" } },
+    { "id": "com.topstep.fitcloudpro", "name": { "en": "FitCloudPro", "fr": "FitCloudPro" } },
+    { "id": "com.tuyware.mygamecollection", "name": { "en": "My Game Collection", "fr": "My Game Collection" } },
+    { "id": "de.astubenbord.paperless_mobile", "name": { "en": "Paperless Mobile", "fr": "Paperless Mobile" } },
+    { "id": "org.yuzu.yuzu_emu.ea", "name": { "en": "yuzu Early Access", "fr": "yuzu Early Access" } },
+    { "id": "psplay.grill.com", "name": { "en": "PSPlay", "fr": "PSPlay" } }
   ],
   "// keep": "Known system parts that must stay on. Never offered, and not reported as unknown.",
   "keep": [
