@@ -7,6 +7,12 @@ struct AppsView: View {
         PageLayout(title: L("Apps_Title"), subtitle: L("Apps_Lead")) {
             Note(text: L("Apps_Note"))
             if !apps.outsideText.isEmpty { Note(text: apps.outsideText, kind: .warning) }
+            if apps.shareCount > 0 {
+                HStack(alignment: .center, spacing: 12) {
+                    Note(text: L("Apps_ShareText", apps.shareCount))
+                    Button(L("Apps_Share")) { apps.shareNames() }.buttonStyle(.borderedProminent)
+                }
+            }
             if apps.isLoading { ProgressView().controlSize(.small) }
             if !apps.status.isEmpty { Note(text: apps.status, kind: apps.statusIsError ? .error : .success) }
 
@@ -24,6 +30,9 @@ struct AppsView: View {
                     .fixedSize()
                 }
                 Text(apps.summary).font(.caption).foregroundStyle(.secondary)
+                if !apps.unnamedText.isEmpty {
+                    Text(apps.unnamedText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
 
                 let visible = apps.visible
                 if visible.isEmpty {
@@ -55,7 +64,7 @@ private struct AppRowView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(row.name).lineLimit(1).truncationMode(.middle)
-                    if row.name != row.package {
+                    if row.hasFriendlyName {
                         Text(row.package).font(.caption.monospaced()).foregroundStyle(.tertiary)
                     }
                     Text(row.details).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
@@ -69,7 +78,22 @@ private struct AppRowView: View {
                     menu
                 }
             }
-            if !row.pending.isEmpty {
+            if row.pending == "name" {
+                @Bindable var row = row
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L("Apps_NameText")).fixedSize(horizontal: false, vertical: true)
+                    HStack {
+                        TextField(L("Apps_NameWatermark"), text: $row.nameDraft)
+                            .textFieldStyle(.roundedBorder)
+                            .onSubmit { apps.saveName(row) }
+                        Button(L("Common_Cancel")) { row.pending = "" }
+                        Button(L("Apps_NameSave")) { apps.saveName(row) }.buttonStyle(.borderedProminent)
+                    }
+                }
+                .padding(10)
+                .background(Color.accentColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+            }
+            if row.isConfirming {
                 HStack {
                     Label(row.confirmText, systemImage: "exclamationmark.triangle.fill")
                         .fixedSize(horizontal: false, vertical: true)
@@ -89,6 +113,7 @@ private struct AppRowView: View {
             Button(L("Apps_Open")) { Task { await apps.run(row, "Apps_Opened", UserApps.open) } }.disabled(!row.canOpen)
             Button(L("Apps_ShowInfo")) { Task { await apps.run(row, "Apps_InfoOpened", UserApps.showInfo) } }
             Button(L("Apps_Stop")) { Task { await apps.run(row, "Apps_Stopped", UserApps.stop) } }.disabled(!row.canStop)
+            Button(L("Apps_NameMenu")) { apps.askName(row) }
             Divider()
             if row.app.isEnabled {
                 Button(L("Apps_TurnOff")) { Task { await apps.setEnabled(row, on: false) } }.disabled(!row.canTurnOff)

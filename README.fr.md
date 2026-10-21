@@ -68,6 +68,8 @@ Chaque version se met à jour seule : elle affiche les nouveautés et installe l
   leur date d'installation et leur provenance (Google Play, un fichier, une autre boutique).
   Ouvrez-les, forcez leur arrêt, désactivez-les (annulable depuis Restaurer), archivez-les
   (Android 15 et plus, garde les données) ou désinstallez-les.
+  Nommez une application que la liste ne connaît pas, et partagez vos noms sur GitHub pour que tout
+  le monde en profite.
 - **Installer une application** : déposez un `.apk` sur la fenêtre.
 
 Rien n'est désinstallé : les applications sont désactivées avec la commande `pm disable-user`

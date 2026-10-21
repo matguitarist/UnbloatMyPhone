@@ -52,6 +52,10 @@
 "Apps_Lead" = "The apps you installed: how much space each one takes and where it came from. Open, stop, turn off or uninstall them from here.";
 "Apps_LessThanMb" = "less than 1 MB";
 "Apps_Mb" = "%1$@ MB";
+"Apps_NameMenu" = "Name this app…";
+"Apps_NameSave" = "Save";
+"Apps_NameText" = "The name you see under its icon on the phone. It's kept on this computer, and you can share it so everyone gets it.";
+"Apps_NameWatermark" = "App name";
 "Apps_Needed" = "In use by the phone";
 "Apps_NoMatch" = "No app matches this search.";
 "Apps_None" = "You haven't installed any apps on this phone.";
@@ -61,6 +65,8 @@
 "Apps_Opened" = "%1$@ is opening on the phone.";
 "Apps_Outside" = "%1$@ app(s) didn't come from Google Play. That's fine if you know where they came from; if you don't, look at them closely.";
 "Apps_Search" = "Search";
+"Apps_Share" = "Share on GitHub";
+"Apps_ShareText" = "You named %1$@ app(s) the app doesn't know yet. Share them so everyone sees the right names: GitHub opens with only the app IDs and the names you typed, and nothing is sent until you submit it there.";
 "Apps_ShowInfo" = "Show its settings on the phone";
 "Apps_SortName" = "Sort by name";
 "Apps_SortNewest" = "Most recently installed";
@@ -77,6 +83,7 @@
 "Apps_UninstallMenu" = "Uninstall…";
 "Apps_Uninstalled" = "Uninstalled";
 "Apps_UninstalledDone" = "%1$@ was uninstalled.";
+"Apps_Unnamed" = "%1$@ app(s) show only their technical name. If you know one, choose Actions › Name this app.";
 "Apps_Version" = "version %1$@";
 "Choose_AlreadyOff" = "%1$@ apps already off";
 "Choose_AlreadyOffOne" = "1 app already off";

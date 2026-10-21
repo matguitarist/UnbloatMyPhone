@@ -107,4 +107,26 @@ enum IssueReport {
         repeat { n -= 1; s = make(body(n, packages.count - n)) } while n > 0 && s.count > maxURL
         return (URL(string: s)!, false)
     }
+
+    /// A pre-filled "App names" issue: only the package names and the names the user typed,
+    /// one "package = Name" per line, ready for tools/add-names.py.
+    @MainActor static func buildNames(_ names: [(package: String, name: String)]) -> (url: URL, complete: Bool) {
+        let title = "App names (\(names.count))"
+        func body(_ count: Int, _ left: Int) -> String {
+            var b = "Names for apps the catalog doesn't know yet, sent from UnbloatMyPhone \(AppUpdater.currentVersion):\n```\n"
+            b += names.prefix(count).map { "\($0.package) = \($0.name)" }.joined(separator: "\n") + "\n```\n"
+            if left > 0 { b += "…and \(left) more: the full list is on the clipboard, paste it here.\n" }
+            return b
+        }
+        func make(_ body: String) -> String {
+            var c = URLComponents(string: newIssue)!
+            c.queryItems = [URLQueryItem(name: "title", value: title), URLQueryItem(name: "body", value: body)]
+            return c.url!.absoluteString
+        }
+        var s = make(body(names.count, 0))
+        if s.count <= maxURL { return (URL(string: s)!, true) }
+        var n = names.count
+        repeat { n -= 1; s = make(body(n, names.count - n)) } while n > 0 && s.count > maxURL
+        return (URL(string: s)!, false)
+    }
 }

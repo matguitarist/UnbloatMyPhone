@@ -102,9 +102,14 @@ enum Catalog {
 
     @MainActor static func isKeep(_ pkg: String) -> Bool { isKeep(current, pkg) }
 
-    /// The catalog's name for an app, in the current language, if it has one.
-    /// A readable name for an app or process ("com.google.android.gms:snet" counts as its app).
+    /// A readable name for an app or process ("com.google.android.gms:snet" counts as its app):
+    /// the catalog's, in the current language, else the one the user gave it.
     @MainActor static func name(of pkg: String) -> String? {
+        catalogName(of: pkg) ?? LocalNames.get(String(pkg.split(separator: ":").first ?? ""))
+    }
+
+    /// The catalog's name for an app, in the current language, if it has one.
+    @MainActor static func catalogName(of pkg: String) -> String? {
         for id in [pkg, String(pkg.split(separator: ":").first ?? "")] {
             if let def = current.packages.first(where: { $0.id == id }) { return def.name.text }
             if let n = current.names?.first(where: { $0.id == id }) { return n.name.text }

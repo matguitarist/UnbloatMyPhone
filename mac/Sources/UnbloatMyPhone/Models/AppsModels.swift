@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 
@@ -5,12 +6,14 @@ import Observation
 @MainActor @Observable
 final class AppRow: Identifiable {
     var app: InstalledApp
-    let name: String
+    var name: String
+    /// What the user is typing in "Name this app".
+    var nameDraft = ""
     let isProtected: Bool
     /// "Apps_Uninstalled" or "Apps_Archived" once done; the row stays until the next refresh.
     var goneKey = ""
     var isWorking = false
-    /// "", "uninstall" or "archive": the action waiting for a yes.
+    /// "", "uninstall", "archive" (waiting for a yes) or "name" (typing a name).
     var pending = ""
     nonisolated let id: String
     var package: String { app.package }
@@ -23,6 +26,8 @@ final class AppRow: Identifiable {
     }
 
     var isGone: Bool { !goneKey.isEmpty }
+    var hasFriendlyName: Bool { name != package }
+    var isConfirming: Bool { pending == "uninstall" || pending == "archive" }
     var isOff: Bool { !app.isEnabled && !isGone }
     private var ready: Bool { !isGone && !isWorking }
     var canOpen: Bool { ready && app.isEnabled && app.hasIcon }
@@ -102,6 +107,40 @@ final class AppsModel {
     func canArchive(_ row: AppRow) -> Bool { row.canRemove && archiveSupported && row.app.fromPlay }
 
     var present: [AppRow] { rows.filter { !$0.isGone } }
+
+    /// Apps shown by their technical name only.
+    var unnamedText: String {
+        let n = present.filter { !$0.hasFriendlyName }.count
+        return n == 0 ? "" : L("Apps_Unnamed", n)
+    }
+
+    /// Bumped when a name is saved, so the share card updates.
+    private(set) var namesVersion = 0
+    var shareCount: Int { _ = namesVersion; return LocalNames.notInCatalog().count }
+
+    func askName(_ row: AppRow) {
+        row.nameDraft = row.hasFriendlyName ? row.name : ""
+        row.pending = "name"
+    }
+
+    func saveName(_ row: AppRow) {
+        LocalNames.set(row.package, row.nameDraft)
+        row.name = Catalog.name(of: row.package) ?? row.package
+        row.pending = ""
+        namesVersion += 1
+    }
+
+    /// Open a pre-filled GitHub issue with the names typed here. Nothing is posted until the user submits it there.
+    func shareNames() {
+        let names = LocalNames.notInCatalog()
+        guard !names.isEmpty else { return }
+        let (url, complete) = IssueReport.buildNames(names)
+        if !complete {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(names.map { "\($0.package) = \($0.name)" }.joined(separator: "\n"), forType: .string)
+        }
+        NSWorkspace.shared.open(url)
+    }
     var summary: String { L("Apps_Summary", present.count, AppRow.size(present.reduce(0) { $0 + $1.app.totalBytes })) }
 
     /// Apps that came from a file or another store, not from Google Play or as a web app.

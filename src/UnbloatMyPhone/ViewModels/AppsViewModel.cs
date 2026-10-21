@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using UnbloatMyPhone.Localization;
 using UnbloatMyPhone.Models;
 using UnbloatMyPhone.Services;
@@ -17,14 +19,19 @@ public sealed partial class AppRow : ObservableObject
         _page = page;
         _app = app;
         IsProtected = isProtected;
-        Name = Catalog.NameOf(app.Package) ?? app.Package;
+        _name = Catalog.NameOf(app.Package) ?? app.Package;
     }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Details), nameof(IsOff), nameof(CanOpen), nameof(CanTurnOff), nameof(CanTurnOn), nameof(CanStop))]
     private InstalledApp _app;
 
-    public string Name { get; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasFriendlyName))]
+    private string _name;
+
+    /// <summary>What the user is typing in "Name this app".</summary>
+    [ObservableProperty] private string _nameDraft = "";
     public string Package => App.Package;
     public bool HasFriendlyName => Name != Package;
     public bool IsProtected { get; }
@@ -40,9 +47,9 @@ public sealed partial class AppRow : ObservableObject
     [NotifyPropertyChangedFor(nameof(CanOpen), nameof(CanTurnOff), nameof(CanTurnOn), nameof(CanStop), nameof(CanRemove), nameof(CanArchive))]
     private bool _isWorking;
 
-    /// <summary>"", "uninstall" or "archive": the action waiting for a yes.</summary>
+    /// <summary>"", "uninstall", "archive" (waiting for a yes) or "name" (typing a name).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasPending), nameof(ConfirmText), nameof(ConfirmButton))]
+    [NotifyPropertyChangedFor(nameof(HasPending), nameof(IsNaming), nameof(ConfirmText), nameof(ConfirmButton))]
     private string _pending = "";
 
     public string GoneText => IsGone ? Loc.Get(GoneKey) : "";
@@ -55,7 +62,8 @@ public sealed partial class AppRow : ObservableObject
     public bool CanTurnOn => Ready && !App.IsEnabled;
     public bool CanRemove => Ready && !IsProtected;
     public bool CanArchive => CanRemove && _page.ArchiveSupported && App.FromPlay;
-    public bool HasPending => Pending.Length > 0;
+    public bool HasPending => Pending is "uninstall" or "archive";
+    public bool IsNaming => Pending == "name";
 
     public string ConfirmText => Pending switch
     {
@@ -113,6 +121,22 @@ public sealed partial class AppRow : ObservableObject
     [RelayCommand] private void AskUninstall() => Pending = "uninstall";
     [RelayCommand] private void AskArchive() => Pending = "archive";
     [RelayCommand] private void Cancel() => Pending = "";
+
+    [RelayCommand]
+    private void AskName()
+    {
+        NameDraft = HasFriendlyName ? Name : "";
+        Pending = "name";
+    }
+
+    [RelayCommand]
+    private void SaveName()
+    {
+        LocalNames.Set(Package, NameDraft);
+        Name = Catalog.NameOf(Package) ?? Package;
+        Pending = "";
+        _page.NamesChanged();
+    }
     [RelayCommand] private Task ConfirmAsync() => _page.RemoveAsync(this);
 }
 
@@ -139,6 +163,20 @@ public sealed partial class AppsViewModel : PageViewModel
     public bool IsEmpty => !IsLoading && Error.Length == 0 && _all.Count == 0;
     public bool NoMatch => _all.Count > 0 && Rows.Count == 0;
     public string Summary => Loc.Format("Apps_Summary", _all.Count(r => !r.IsGone), AppRow.Size(_all.Where(r => !r.IsGone).Sum(r => r.App.TotalBytes)));
+    /// <summary>Apps shown by their technical name only.</summary>
+    public string UnnamedText
+    {
+        get
+        {
+            var n = _all.Count(r => !r.IsGone && !r.HasFriendlyName);
+            return n == 0 ? "" : Loc.Format("Apps_Unnamed", n);
+        }
+    }
+
+    public int ShareCount => LocalNames.NotInCatalog().Count;
+    public bool CanShare => ShareCount > 0;
+    public string ShareText => Loc.Format("Apps_ShareText", ShareCount);
+
     public string[] SortOptions => [Loc.Get("Apps_SortName"), Loc.Get("Apps_SortSize"), Loc.Get("Apps_SortNewest")];
 
     /// <summary>Apps that came from a file or another store, not from Google Play or as a web app.</summary>
@@ -221,7 +259,23 @@ public sealed partial class AppsViewModel : PageViewModel
 
     private void Counts()
     {
-        foreach (var name in new[] { nameof(IsEmpty), nameof(NoMatch), nameof(Summary), nameof(OutsideText) }) OnPropertyChanged(name);
+        foreach (var name in new[] { nameof(IsEmpty), nameof(NoMatch), nameof(Summary), nameof(OutsideText), nameof(UnnamedText),
+                     nameof(ShareCount), nameof(CanShare), nameof(ShareText) }) OnPropertyChanged(name);
+    }
+
+    /// <summary>The row keeps its place until the next refresh, so it doesn't jump away while you look at it.</summary>
+    public void NamesChanged() => Counts();
+
+    /// <summary>Open a pre-filled GitHub issue with the names typed here. Nothing is posted until the user submits it there.</summary>
+    [RelayCommand]
+    private async Task ShareNamesAsync()
+    {
+        var names = LocalNames.NotInCatalog();
+        if (names.Count == 0) return;
+        var (url, complete) = IssueReport.BuildNames(names);
+        if (!complete && (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.Clipboard is { } clipboard)
+            await clipboard.SetTextAsync(string.Join("\n", names.Select(n => $"{n.Key} = {n.Value}")));
+        UpdateService.OpenInBrowser(url);
     }
 
     private void Report(string? error, string okKey, AppRow row)

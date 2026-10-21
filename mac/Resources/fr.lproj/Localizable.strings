@@ -52,6 +52,10 @@
 "Apps_Lead" = "Les applications que vous avez installées : la place que prend chacune et sa provenance. Ouvrez-les, arrêtez-les, désactivez-les ou désinstallez-les d'ici.";
 "Apps_LessThanMb" = "moins de 1 Mo";
 "Apps_Mb" = "%1$@ Mo";
+"Apps_NameMenu" = "Nommer cette application…";
+"Apps_NameSave" = "Enregistrer";
+"Apps_NameText" = "Le nom affiché sous son icône sur le téléphone. Il est gardé sur cet ordinateur, et vous pouvez le partager pour que tout le monde en profite.";
+"Apps_NameWatermark" = "Nom de l'application";
 "Apps_Needed" = "Utilisée par le téléphone";
 "Apps_NoMatch" = "Aucune application ne correspond à cette recherche.";
 "Apps_None" = "Vous n'avez installé aucune application sur ce téléphone.";
@@ -61,6 +65,8 @@
 "Apps_Opened" = "%1$@ s'ouvre sur le téléphone.";
 "Apps_Outside" = "%1$@ application(s) ne viennent pas de Google Play. Pas de souci si vous savez d'où elles viennent ; sinon, regardez-les de près.";
 "Apps_Search" = "Rechercher";
+"Apps_Share" = "Partager sur GitHub";
+"Apps_ShareText" = "Vous avez nommé %1$@ application(s) que l'application ne connaît pas encore. Partagez-les pour que tout le monde voie les bons noms : GitHub s'ouvre avec seulement les identifiants des applications et les noms que vous avez tapés, et rien n'est envoyé avant que vous le validiez là-bas.";
 "Apps_ShowInfo" = "Afficher ses paramètres sur le téléphone";
 "Apps_SortName" = "Trier par nom";
 "Apps_SortNewest" = "Les plus récentes d'abord";
@@ -77,6 +83,7 @@
 "Apps_UninstallMenu" = "Désinstaller…";
 "Apps_Uninstalled" = "Désinstallée";
 "Apps_UninstalledDone" = "%1$@ a été désinstallée.";
+"Apps_Unnamed" = "%1$@ application(s) n'affichent que leur nom technique. Si vous en reconnaissez une, choisissez Actions › Nommer cette application.";
 "Apps_Version" = "version %1$@";
 "Choose_AlreadyOff" = "%1$@ applications déjà désactivées";
 "Choose_AlreadyOffOne" = "1 application déjà désactivée";

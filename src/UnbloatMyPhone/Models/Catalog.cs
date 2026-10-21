@@ -175,9 +175,14 @@ public static class Catalog
 
     public static bool IsKeep(string pkg) => _current.Keep.Any(k => k.Id == pkg);
 
+    /// <summary>
+    /// A readable name for an app or process ("com.google.android.gms:snet" counts as its app):
+    /// the catalog's, in the current language, else the one the user gave it.
+    /// </summary>
+    public static string? NameOf(string pkg) => CatalogNameOf(pkg) ?? Services.LocalNames.Get(pkg.Split(':')[0]);
+
     /// <summary>The catalog's name for an app, in the current language, if it has one.</summary>
-    /// <summary>A readable name for an app or process ("com.google.android.gms:snet" counts as its app).</summary>
-    public static string? NameOf(string pkg)
+    public static string? CatalogNameOf(string pkg)
     {
         var app = pkg.Split(':')[0];
         foreach (var id in new[] { pkg, app })
