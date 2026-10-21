@@ -69,8 +69,8 @@ Chaque version se met à jour seule : elle affiche les nouveautés et installe l
   leur date d'installation et leur provenance (Google Play, un fichier, une autre boutique).
   Ouvrez-les, forcez leur arrêt, désactivez-les (annulable depuis Restaurer), archivez-les
   (Android 15 et plus, garde les données) ou désinstallez-les.
-  Nommez une application que la liste ne connaît pas, et partagez vos noms sur GitHub pour que tout
-  le monde en profite.
+  Les applications qui ne viennent pas de Google Play sont listées par nom et signalées, pour que
+  vous puissiez les vérifier.
   (Pour les icônes et les noms, un minuscule programme est copié dans le dossier temporaire du
   téléphone, lancé une fois puis supprimé ; rien n'est installé. Son code est dans `helper/`.)
 - **Installer une application** : déposez un `.apk` sur la fenêtre.
