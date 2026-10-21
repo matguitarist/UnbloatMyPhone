@@ -9,7 +9,9 @@ Console.WriteLine($"exe: {exe}");
 Console.WriteLine($"can install in place: {UpdateService.CanInstallInPlace}");
 if (!UpdateService.CanInstallInPlace) return Fail("expected to be able to install in place");
 
-var update = await UpdateService.CheckAsync(new Version(0, 0, 1));
+UpdateInfo? update;
+try { update = await UpdateService.CheckAsync(new Version(0, 0, 1)); }
+catch (HttpRequestException e) when (e.StatusCode == System.Net.HttpStatusCode.NotFound) { update = null; } // no release at all
 if (update is null)
 {
     // Nothing to test against until the first release is out.
