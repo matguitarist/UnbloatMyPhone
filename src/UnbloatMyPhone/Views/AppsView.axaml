@@ -20,12 +20,27 @@
       <Border Classes="warn" IsVisible="{Binding OutsideText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
         <TextBlock Text="{Binding OutsideText}" Foreground="{DynamicResource WarnFg}" TextWrapping="Wrap" />
       </Border>
-      <Border Classes="note" IsVisible="{Binding CanShare}">
-        <DockPanel>
-          <Button DockPanel.Dock="Right" Classes="accent" Margin="12,0,0,0" VerticalAlignment="Center"
-                  Content="{l:T Apps_Share}" Command="{Binding ShareNamesCommand}" />
-          <TextBlock Text="{Binding ShareText}" TextWrapping="Wrap" VerticalAlignment="Center" />
-        </DockPanel>
+      <!-- Help grow the names list -->
+      <Border Classes="card" IsVisible="{Binding HasNameHelp}">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+          <Border Width="40" Height="40" CornerRadius="10" Background="{DynamicResource AccentSoft}" VerticalAlignment="Top">
+            <Path Stroke="{DynamicResource AccentFg}" StrokeThickness="1.7" StrokeLineCap="Round" StrokeJoin="Round"
+                  Width="20" Height="20" Stretch="Uniform"
+                  Data="M12 3 A9 9 0 1 1 11.99 3 M9.5 9.5 A2.5 2.5 0 1 1 12 12 V13.5 M12 17 V17.2" />
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="10">
+            <TextBlock Classes="h2" Text="{l:T Apps_HelpTitle}" />
+            <TextBlock Classes="muted" Text="{Binding NameHelpText}" TextWrapping="Wrap" />
+            <WrapPanel>
+              <Button Content="{l:T Apps_Share}" Command="{Binding ShareNamesCommand}" Margin="0,0,10,0" />
+              <Button Classes="link" Content="{l:T Apps_Copy}" Command="{Binding CopyNamesCommand}" VerticalAlignment="Center" Margin="0,0,10,0" />
+              <Button Classes="link" Content="{Binding ShowNamesText}" Command="{Binding ToggleNamesCommand}" VerticalAlignment="Center" />
+            </WrapPanel>
+            <Border Classes="note" Padding="12,8" IsVisible="{Binding ShowNames}">
+              <SelectableTextBlock Classes="mono" Text="{Binding NameList}" TextWrapping="Wrap" />
+            </Border>
+          </StackPanel>
+        </Grid>
       </Border>
       <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" />
       <Border Classes="err" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
@@ -46,8 +61,6 @@
           <TextBox Watermark="{l:T Apps_Search}" Text="{Binding Search}" />
         </DockPanel>
         <TextBlock Classes="faint" Text="{Binding Summary}" />
-        <TextBlock Classes="muted" Text="{Binding UnnamedText}" TextWrapping="Wrap"
-                   IsVisible="{Binding UnnamedText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         <TextBlock Classes="muted" Text="{l:T Apps_NoMatch}" IsVisible="{Binding NoMatch}" />
 
         <Border Classes="card" Padding="0" IsVisible="{Binding !NoMatch}">

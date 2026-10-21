@@ -39,29 +39,35 @@ public static class IssueReport
     }
 
     /// <summary>
-    /// A pre-filled "App names" issue: only the package names and the names the user typed,
-    /// one "package = Name" per line, ready for tools/add-names.py.
+    /// A pre-filled "App names" issue: only package names and the names the user typed. Named lines
+    /// ("package = Name") are ready for tools/add-names.py; bare packages still need a name.
     /// </summary>
-    /// <returns>The link, and whether every name fit in it.</returns>
-    public static (string Url, bool Complete) BuildNames(IReadOnlyList<KeyValuePair<string, string>> names)
+    /// <returns>The link, and whether every line fit in it.</returns>
+    public static (string Url, bool Complete) BuildNames(IReadOnlyList<string> lines)
     {
-        var title = $"App names ({names.Count})";
+        var named = lines.Count(l => l.Contains(" = "));
+        var unnamed = lines.Count - named;
+        var title = unnamed == 0 ? $"App names ({named})"
+            : named == 0 ? $"Apps without a name ({unnamed})"
+            : $"App names ({named} named, {unnamed} without a name)";
         string Body(int count, int left)
         {
             var b = new StringBuilder();
-            b.AppendLine($"Names for apps the catalog doesn't know yet, sent from UnbloatMyPhone {UpdateService.Current.ToString(3)}:");
+            b.AppendLine($"Apps the catalog has no name for, sent from UnbloatMyPhone {UpdateService.Current.ToString(3)}.");
+            if (named > 0) b.AppendLine("Lines with \"= Name\" were named by the user.");
+            if (unnamed > 0) b.AppendLine("The others still need a name: if you know one, add \" = Name\" after it.");
             b.AppendLine("```");
-            foreach (var n in names.Take(count)) b.AppendLine($"{n.Key} = {n.Value}");
+            foreach (var l in lines.Take(count)) b.AppendLine(l);
             b.AppendLine("```");
             if (left > 0) b.AppendLine($"…and {left} more: the full list is on the clipboard, paste it here.");
             return b.ToString();
         }
         string Url(string body) => $"{NewIssue}?title={Uri.EscapeDataString(title)}&body={Uri.EscapeDataString(body)}";
 
-        var url = Url(Body(names.Count, 0));
+        var url = Url(Body(lines.Count, 0));
         if (url.Length <= MaxUrl) return (url, true);
-        var n = names.Count;
-        while (n > 0 && (url = Url(Body(n, names.Count - n))).Length > MaxUrl) n--;
+        var n = lines.Count;
+        while (n > 0 && (url = Url(Body(n, lines.Count - n))).Length > MaxUrl) n--;
         return (url, false);
     }
 }

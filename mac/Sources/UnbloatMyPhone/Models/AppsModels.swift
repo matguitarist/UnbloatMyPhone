@@ -108,15 +108,28 @@ final class AppsModel {
 
     var present: [AppRow] { rows.filter { !$0.isGone } }
 
-    /// Apps shown by their technical name only.
-    var unnamedText: String {
-        let n = present.filter { !$0.hasFriendlyName }.count
-        return n == 0 ? "" : L("Apps_Unnamed", n)
+    /// Bumped when a name is saved, so the "Help name apps" card updates.
+    private(set) var namesVersion = 0
+    var showNames = false
+
+    /// What "Help name apps" shares and copies: the names typed here that the catalog lacks ("package = Name"),
+    /// then the apps on this phone that still show only their technical name.
+    var nameLines: (named: [String], unnamed: [String]) {
+        _ = namesVersion
+        return (LocalNames.notInCatalog().map { "\($0.package) = \($0.name)" },
+                present.filter { !$0.hasFriendlyName }.map(\.package).sorted())
     }
 
-    /// Bumped when a name is saved, so the share card updates.
-    private(set) var namesVersion = 0
-    var shareCount: Int { _ = namesVersion; return LocalNames.notInCatalog().count }
+    var nameList: String { let l = nameLines; return (l.named + l.unnamed).joined(separator: "\n") }
+
+    var nameHelpText: String {
+        let l = nameLines
+        var parts: [String] = []
+        if !l.unnamed.isEmpty { parts.append(L("Apps_Unnamed", l.unnamed.count)) }
+        if !l.named.isEmpty { parts.append(L("Apps_HelpNamed", l.named.count)) }
+        parts.append(L("Apps_HelpShare"))
+        return parts.joined(separator: " ")
+    }
 
     func askName(_ row: AppRow) {
         row.nameDraft = row.hasFriendlyName ? row.name : ""
@@ -130,16 +143,24 @@ final class AppsModel {
         namesVersion += 1
     }
 
-    /// Open a pre-filled GitHub issue with the names typed here. Nothing is posted until the user submits it there.
+    /// Open a pre-filled GitHub issue with the list. Nothing is posted until the user submits it there.
     func shareNames() {
-        let names = LocalNames.notInCatalog()
-        guard !names.isEmpty else { return }
-        let (url, complete) = IssueReport.buildNames(names)
-        if !complete {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(names.map { "\($0.package) = \($0.name)" }.joined(separator: "\n"), forType: .string)
-        }
+        let l = nameLines
+        guard !(l.named.isEmpty && l.unnamed.isEmpty) else { return }
+        let (url, complete) = IssueReport.buildNames(l.named + l.unnamed)
+        if !complete { copy(nameList) }
         NSWorkspace.shared.open(url)
+    }
+
+    func copyNames() {
+        copy(nameList)
+        statusIsError = false
+        status = L("Apps_Copied")
+    }
+
+    private func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
     var summary: String { L("Apps_Summary", present.count, AppRow.size(present.reduce(0) { $0 + $1.app.totalBytes })) }
 

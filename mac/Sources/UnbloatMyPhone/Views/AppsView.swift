@@ -7,10 +7,34 @@ struct AppsView: View {
         PageLayout(title: L("Apps_Title"), subtitle: L("Apps_Lead")) {
             Note(text: L("Apps_Note"))
             if !apps.outsideText.isEmpty { Note(text: apps.outsideText, kind: .warning) }
-            if apps.shareCount > 0 {
-                HStack(alignment: .center, spacing: 12) {
-                    Note(text: L("Apps_ShareText", apps.shareCount))
-                    Button(L("Apps_Share")) { apps.shareNames() }.buttonStyle(.borderedProminent)
+            let lines = apps.nameLines
+            if !lines.named.isEmpty || !lines.unnamed.isEmpty {
+                Card {
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: "questionmark.app").font(.title2).foregroundStyle(.tint).frame(width: 40)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(L("Apps_HelpTitle")).font(.headline)
+                            Text(apps.nameHelpText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            HStack(spacing: 12) {
+                                Button(L("Apps_Share")) { apps.shareNames() }
+                                Button(L("Apps_Copy")) { apps.copyNames() }.buttonStyle(.link)
+                                Button(apps.showNames ? L("Apps_HelpHide") : L("Apps_HelpShow", lines.named.count + lines.unnamed.count)) {
+                                    apps.showNames.toggle()
+                                }
+                                .buttonStyle(.link)
+                            }
+                            if apps.showNames {
+                                Text(apps.nameList)
+                                    .font(.caption.monospaced())
+                                    .textSelection(.enabled)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(10)
+                                    .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                            }
+                        }
+                        Spacer(minLength: 0)
+                    }
                 }
             }
             if apps.isLoading { ProgressView().controlSize(.small) }
@@ -30,9 +54,6 @@ struct AppsView: View {
                     .fixedSize()
                 }
                 Text(apps.summary).font(.caption).foregroundStyle(.secondary)
-                if !apps.unnamedText.isEmpty {
-                    Text(apps.unnamedText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                }
 
                 let visible = apps.visible
                 if visible.isEmpty {

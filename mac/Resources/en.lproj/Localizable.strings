@@ -43,10 +43,17 @@
 "Apps_ArchivedDone" = "%1$@ was archived. Tap its icon on the phone to get it back.";
 "Apps_ConfirmArchive" = "Archive %1$@? The app is removed but its data and icon stay. Tap the icon to download it again.";
 "Apps_ConfirmUninstall" = "Uninstall %1$@? The app and everything it stored on the phone are deleted. This can't be undone from Restore.";
+"Apps_Copied" = "The list is copied.";
+"Apps_Copy" = "Copy the list";
 "Apps_Failed" = "That didn't work for %1$@: %2$@";
 "Apps_FromFile" = "installed from a file";
 "Apps_FromWeb" = "web app (Chrome)";
 "Apps_Gb" = "%1$@ GB";
+"Apps_HelpHide" = "Hide the list";
+"Apps_HelpNamed" = "You named %1$@ app(s) the list doesn't know yet.";
+"Apps_HelpShare" = "Sharing the list on GitHub helps everyone see the right names. Only the app IDs and the names you typed are included, and you see everything before posting, so you can remove any you'd rather keep private.";
+"Apps_HelpShow" = "Show the list (%1$@)";
+"Apps_HelpTitle" = "Help name apps";
 "Apps_InfoOpened" = "The settings for %1$@ are open on the phone.";
 "Apps_InstalledOn" = "installed %1$@";
 "Apps_Lead" = "The apps you installed: how much space each one takes and where it came from. Open, stop, turn off or uninstall them from here.";
@@ -66,7 +73,6 @@
 "Apps_Outside" = "%1$@ app(s) didn't come from Google Play. That's fine if you know where they came from; if you don't, look at them closely.";
 "Apps_Search" = "Search";
 "Apps_Share" = "Share on GitHub";
-"Apps_ShareText" = "You named %1$@ app(s) the app doesn't know yet. Share them so everyone sees the right names: GitHub opens with only the app IDs and the names you typed, and nothing is sent until you submit it there.";
 "Apps_ShowInfo" = "Show its settings on the phone";
 "Apps_SortName" = "Sort by name";
 "Apps_SortNewest" = "Most recently installed";

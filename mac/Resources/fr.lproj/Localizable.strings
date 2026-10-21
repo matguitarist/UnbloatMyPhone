@@ -43,10 +43,17 @@
 "Apps_ArchivedDone" = "%1$@ a été archivée. Touchez son icône sur le téléphone pour la récupérer.";
 "Apps_ConfirmArchive" = "Archiver %1$@ ? L'application est retirée, mais ses données et son icône restent. Touchez l'icône pour la retélécharger.";
 "Apps_ConfirmUninstall" = "Désinstaller %1$@ ? L'application et tout ce qu'elle a enregistré sur le téléphone seront supprimés. Restaurer ne pourra pas l'annuler.";
+"Apps_Copied" = "La liste est copiée.";
+"Apps_Copy" = "Copier la liste";
 "Apps_Failed" = "Ça n'a pas marché pour %1$@ : %2$@";
 "Apps_FromFile" = "installée depuis un fichier";
 "Apps_FromWeb" = "appli web (Chrome)";
 "Apps_Gb" = "%1$@ Go";
+"Apps_HelpHide" = "Masquer la liste";
+"Apps_HelpNamed" = "Vous avez nommé %1$@ application(s) que la liste ne connaît pas encore.";
+"Apps_HelpShare" = "Partager la liste sur GitHub aide tout le monde à voir les bons noms. Seuls les identifiants des applications et les noms que vous avez tapés sont inclus, et vous voyez tout avant de publier : vous pouvez retirer celles que vous préférez garder pour vous.";
+"Apps_HelpShow" = "Afficher la liste (%1$@)";
+"Apps_HelpTitle" = "Aidez à nommer les applications";
 "Apps_InfoOpened" = "Les paramètres de %1$@ sont ouverts sur le téléphone.";
 "Apps_InstalledOn" = "installée le %1$@";
 "Apps_Lead" = "Les applications que vous avez installées : la place que prend chacune et sa provenance. Ouvrez-les, arrêtez-les, désactivez-les ou désinstallez-les d'ici.";
@@ -66,7 +73,6 @@
 "Apps_Outside" = "%1$@ application(s) ne viennent pas de Google Play. Pas de souci si vous savez d'où elles viennent ; sinon, regardez-les de près.";
 "Apps_Search" = "Rechercher";
 "Apps_Share" = "Partager sur GitHub";
-"Apps_ShareText" = "Vous avez nommé %1$@ application(s) que l'application ne connaît pas encore. Partagez-les pour que tout le monde voie les bons noms : GitHub s'ouvre avec seulement les identifiants des applications et les noms que vous avez tapés, et rien n'est envoyé avant que vous le validiez là-bas.";
 "Apps_ShowInfo" = "Afficher ses paramètres sur le téléphone";
 "Apps_SortName" = "Trier par nom";
 "Apps_SortNewest" = "Les plus récentes d'abord";

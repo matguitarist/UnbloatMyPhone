@@ -163,19 +163,30 @@ public sealed partial class AppsViewModel : PageViewModel
     public bool IsEmpty => !IsLoading && Error.Length == 0 && _all.Count == 0;
     public bool NoMatch => _all.Count > 0 && Rows.Count == 0;
     public string Summary => Loc.Format("Apps_Summary", _all.Count(r => !r.IsGone), AppRow.Size(_all.Where(r => !r.IsGone).Sum(r => r.App.TotalBytes)));
-    /// <summary>Apps shown by their technical name only.</summary>
-    public string UnnamedText
+    /// <summary>
+    /// What "Help name apps" shares and copies: the names typed here that the catalog lacks ("package = Name"),
+    /// then the apps on this phone that still show only their technical name.
+    /// </summary>
+    private List<string> _nameLines = [];
+    private int _namedCount, _unnamedCount;
+    public bool HasNameHelp => _nameLines.Count > 0;
+    public string NameList => string.Join("\n", _nameLines);
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowNamesText))]
+    private bool _showNames;
+    public string ShowNamesText => ShowNames ? Loc.Get("Apps_HelpHide") : Loc.Format("Apps_HelpShow", _nameLines.Count);
+
+    public string NameHelpText
     {
         get
         {
-            var n = _all.Count(r => !r.IsGone && !r.HasFriendlyName);
-            return n == 0 ? "" : Loc.Format("Apps_Unnamed", n);
+            var parts = new List<string>();
+            if (_unnamedCount > 0) parts.Add(Loc.Format("Apps_Unnamed", _unnamedCount));
+            if (_namedCount > 0) parts.Add(Loc.Format("Apps_HelpNamed", _namedCount));
+            parts.Add(Loc.Get("Apps_HelpShare"));
+            return string.Join(" ", parts);
         }
     }
-
-    public int ShareCount => LocalNames.NotInCatalog().Count;
-    public bool CanShare => ShareCount > 0;
-    public string ShareText => Loc.Format("Apps_ShareText", ShareCount);
 
     public string[] SortOptions => [Loc.Get("Apps_SortName"), Loc.Get("Apps_SortSize"), Loc.Get("Apps_SortNewest")];
 
@@ -259,23 +270,46 @@ public sealed partial class AppsViewModel : PageViewModel
 
     private void Counts()
     {
-        foreach (var name in new[] { nameof(IsEmpty), nameof(NoMatch), nameof(Summary), nameof(OutsideText), nameof(UnnamedText),
-                     nameof(ShareCount), nameof(CanShare), nameof(ShareText) }) OnPropertyChanged(name);
+        var named = LocalNames.NotInCatalog();
+        var unnamed = _all.Where(r => !r.IsGone && !r.HasFriendlyName).Select(r => r.Package).Order().ToList();
+        _namedCount = named.Count;
+        _unnamedCount = unnamed.Count;
+        _nameLines = [.. named.Select(n => $"{n.Key} = {n.Value}"), .. unnamed];
+        foreach (var name in new[] { nameof(IsEmpty), nameof(NoMatch), nameof(Summary), nameof(OutsideText),
+                     nameof(HasNameHelp), nameof(NameList), nameof(NameHelpText), nameof(ShowNamesText) }) OnPropertyChanged(name);
     }
 
     /// <summary>The row keeps its place until the next refresh, so it doesn't jump away while you look at it.</summary>
     public void NamesChanged() => Counts();
 
-    /// <summary>Open a pre-filled GitHub issue with the names typed here. Nothing is posted until the user submits it there.</summary>
+    [RelayCommand] private void ToggleNames() => ShowNames = !ShowNames;
+
+    /// <summary>Open a pre-filled GitHub issue with the list. Nothing is posted until the user submits it there.</summary>
     [RelayCommand]
     private async Task ShareNamesAsync()
     {
-        var names = LocalNames.NotInCatalog();
-        if (names.Count == 0) return;
-        var (url, complete) = IssueReport.BuildNames(names);
-        if (!complete && (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.Clipboard is { } clipboard)
-            await clipboard.SetTextAsync(string.Join("\n", names.Select(n => $"{n.Key} = {n.Value}")));
+        if (_nameLines.Count == 0) return;
+        var (url, complete) = IssueReport.BuildNames(_nameLines);
+        if (!complete) await CopyAsync(NameList);
         UpdateService.OpenInBrowser(url);
+    }
+
+    [RelayCommand]
+    private async Task CopyNamesAsync()
+    {
+        if (await CopyAsync(NameList))
+        {
+            StatusIsError = false;
+            Status = Loc.Get("Apps_Copied");
+        }
+    }
+
+    private static async Task<bool> CopyAsync(string text)
+    {
+        if ((Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.Clipboard is not { } clipboard)
+            return false;
+        await clipboard.SetTextAsync(text);
+        return true;
     }
 
     private void Report(string? error, string okKey, AppRow row)
