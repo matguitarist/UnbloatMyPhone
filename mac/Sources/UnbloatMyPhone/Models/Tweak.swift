@@ -17,10 +17,10 @@ struct SettingWrite: Codable, Hashable {
 
 final class ApplyContext {
     let adb: Adb
-    let device: TvDevice
+    let device: PhoneDevice
     let backup: Backup
     var serial: String { device.serial }
-    init(adb: Adb, device: TvDevice, backup: Backup) { self.adb = adb; self.device = device; self.backup = backup }
+    init(adb: Adb, device: PhoneDevice, backup: Backup) { self.adb = adb; self.device = device; self.backup = backup }
 }
 
 struct TweakResult {
@@ -34,9 +34,7 @@ final class Tweak: Identifiable {
     enum Kind {
         case package(String)
         case settings([SettingWrite])
-        case backgroundLimit
         case privateDns
-        case wifiOff
         case trimCaches
         case optimizeApps
     }
@@ -73,9 +71,7 @@ final class Tweak: Identifiable {
     var settingKeys: [String] {
         switch kind {
         case .settings(let writes): writes.map(\.key)
-        case .backgroundLimit: ["max_cached_processes", "activity_manager_constants"]
         case .privateDns: ["private_dns_mode", "private_dns_specifier"]
-        case .wifiOff: ["wifi_on"]
         default: []
         }
     }
@@ -93,9 +89,7 @@ final class Tweak: Identifiable {
         case .settings(let writes):
             var seen = Set<String>()
             return writes.map(\.key).filter { seen.insert($0).inserted }.joined(separator: " · ")
-        case .backgroundLimit: return "max_cached_processes"
         case .privateDns: return "private_dns_mode · private_dns_specifier"
-        case .wifiOff: return "svc wifi disable"
         case .trimCaches: return "pm trim-caches"
         case .optimizeApps: return "cmd package bg-dexopt-job"
         }
@@ -131,30 +125,15 @@ final class Tweak: Identifiable {
             }
             return TweakResult(success: true)
 
-        case .backgroundLimit:
-            let value = selectedOption ?? "16"
-            // Android 10+ reads it from device_config; older versions from a global setting.
-            let ok = ctx.device.sdk >= 29
-                ? await SettingsIO.change(ctx, "device_config:activity_manager", "max_cached_processes", value)
-                : await SettingsIO.change(ctx, "global", "activity_manager_constants", "max_cached_processes=\(value)")
-            return TweakResult(success: ok)
-
-        case .wifiOff:
-            let before = await SettingsIO.get(ctx.adb, ctx.serial, "global", "wifi_on")
-            ctx.backup.wifiWasOn = before != "0"
-            try? ctx.backup.save()
-            _ = await ctx.adb.shell(ctx.serial, "svc wifi disable")
-            return TweakResult(success: true)
-
         case .privateDns:
             return await applyPrivateDns(ctx)
 
         case .trimCaches:
-            let before = await TvDevice.readStorage(ctx.adb, serial: ctx.serial)
+            let before = await PhoneDevice.readStorage(ctx.adb, serial: ctx.serial)
             let r = await ctx.adb.shell(ctx.serial, "pm trim-caches 999G", timeout: 120)
             guard r.ok else { return TweakResult(success: false, detail: Self.firstLine(r.all)) }
             try? await Task.sleep(for: .milliseconds(1500))
-            let after = await TvDevice.readStorage(ctx.adb, serial: ctx.serial)
+            let after = await PhoneDevice.readStorage(ctx.adb, serial: ctx.serial)
             return TweakResult(success: true, detail: L("Apply_Freed", max(0, after.freeMb - before.freeMb)))
 
         case .optimizeApps:

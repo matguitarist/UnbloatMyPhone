@@ -3,36 +3,15 @@
              xmlns:l="using:UnbloatMyPhone.Localization"
              xmlns:vm="using:UnbloatMyPhone.ViewModels"
              x:Class="UnbloatMyPhone.Views.ConnectView">
-  <UserControl.Resources>
-    <!-- A TV found on the network or used before -->
-    <DataTemplate x:Key="TvRow" DataType="vm:FoundTv">
-      <Border Classes="tvrow">
-        <DockPanel>
-          <Button DockPanel.Dock="Right" Content="{l:T Connect_ConnectThis}" VerticalAlignment="Center"
-                  Command="{Binding $parent[UserControl].DataContext.ConnectFoundCommand}"
-                  CommandParameter="{Binding}" />
-          <Border DockPanel.Dock="Left" Width="36" Height="36" CornerRadius="9" Background="{DynamicResource AccentSoft}" Margin="0,0,14,0">
-            <Path Stroke="{DynamicResource AccentFg}" StrokeThickness="1.7" StrokeLineCap="Round" StrokeJoin="Round"
-                  Width="18" Height="18" Stretch="Uniform" Data="M3 5 H21 V16 H3 Z M8 20 H16 M12 16 V20" />
-          </Border>
-          <StackPanel VerticalAlignment="Center" Spacing="1">
-            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" IsVisible="{Binding HasName}" />
-            <TextBlock Text="{Binding Address}" FontWeight="SemiBold" IsVisible="{Binding !HasName}" />
-            <TextBlock Classes="faint" Text="{Binding Address}" IsVisible="{Binding HasName}" />
-          </StackPanel>
-        </DockPanel>
-      </Border>
-    </DataTemplate>
-  </UserControl.Resources>
   <UserControl.Styles>
-    <Style Selector="Border.tvrow">
+    <Style Selector="Border.phonerow">
       <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Padding" Value="12,10" />
       <Setter Property="Background" Value="Transparent" />
     </Style>
-    <Style Selector="Border.tvrow:pointerover">
+    <Style Selector="Border.phonerow:pointerover">
       <Setter Property="Background" Value="{DynamicResource RowHover}" />
     </Style>
   </UserControl.Styles>
@@ -43,13 +22,13 @@
         <TextBlock Classes="lead" Text="{l:T Connect_Lead}" />
       </StackPanel>
 
-      <!-- Waiting for "Allow USB debugging?" on the TV -->
+      <!-- Waiting for "Allow USB debugging?" on the phone -->
       <Border Classes="card" BorderBrush="{DynamicResource SystemAccentColor}" BorderThickness="2" IsVisible="{Binding IsWaiting}">
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="18">
           <Border Width="52" Height="52" CornerRadius="12" Background="{DynamicResource AccentSoft}" VerticalAlignment="Top">
             <Path Stroke="{DynamicResource AccentFg}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round"
                   Width="28" Height="28" Stretch="Uniform"
-                  Data="M3 5 H21 V16 H3 Z M8 20 H16 M12 16 V20 M10 9 L12 11 L10 13" />
+                  Data="M8 2 H16 A2 2 0 0 1 18 4 V20 A2 2 0 0 1 16 22 H8 A2 2 0 0 1 6 20 V4 A2 2 0 0 1 8 2 Z M9.5 12 L11.5 14 L15 10" />
           </Border>
           <StackPanel Grid.Column="1" Spacing="10">
             <TextBlock Classes="h2" Text="{l:T Connect_ApproveTitle}" />
@@ -77,67 +56,76 @@
         </StackPanel>
       </Border>
 
-      <Border Classes="card" IsEnabled="{Binding !IsBusy}" IsVisible="{Binding HasRecent}">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="4">
-            <TextBlock Classes="h2" Text="{l:T Connect_RecentTitle}" />
-            <TextBlock Classes="muted" Text="{l:T Connect_RecentText}" />
-          </StackPanel>
-          <ItemsControl ItemsSource="{Binding Recent}" ItemTemplate="{StaticResource TvRow}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-          </ItemsControl>
-        </StackPanel>
-      </Border>
-
+      <!-- Phones adb can see, refreshed on its own -->
       <Border Classes="card" IsEnabled="{Binding !IsBusy}">
         <StackPanel Spacing="14">
           <StackPanel Spacing="4">
-            <TextBlock Classes="h2" Text="{l:T Connect_FindTitle}" />
-            <TextBlock Classes="muted" Text="{l:T Connect_FindText}" />
+            <TextBlock Classes="h2" Text="{l:T Connect_PhonesTitle}" />
+            <TextBlock Classes="muted" Text="{l:T Connect_PhonesText}" />
           </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="14">
-            <Button Classes="accent" Content="{l:T Connect_Scan}" Command="{Binding ScanCommand}" IsEnabled="{Binding !IsScanning}" />
-            <ProgressBar Width="220" VerticalAlignment="Center" Value="{Binding ScanProgress}" Maximum="100" IsVisible="{Binding IsScanning}" />
-          </StackPanel>
-          <ItemsControl ItemsSource="{Binding Found}" ItemTemplate="{StaticResource TvRow}">
+          <ItemsControl ItemsSource="{Binding Phones}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="vm:FoundPhone">
+                <Border Classes="phonerow">
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Classes="accent" Content="{l:T Connect_UseThis}" VerticalAlignment="Center"
+                            IsVisible="{Binding CanUse}"
+                            Command="{Binding $parent[UserControl].DataContext.UseCommand}" CommandParameter="{Binding}" />
+                    <Border DockPanel.Dock="Left" Width="36" Height="36" CornerRadius="9" Background="{DynamicResource AccentSoft}" Margin="0,0,14,0">
+                      <Path Stroke="{DynamicResource AccentFg}" StrokeThickness="1.7" StrokeLineCap="Round" StrokeJoin="Round"
+                            Width="18" Height="18" Stretch="Uniform"
+                            Data="M8 2 H16 A2 2 0 0 1 18 4 V20 A2 2 0 0 1 16 22 H8 A2 2 0 0 1 6 20 V4 A2 2 0 0 1 8 2 Z M11 18.5 H13" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                      <TextBlock Classes="faint" Text="{Binding Detail}" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </DockPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <Border Classes="warn" IsVisible="{Binding NothingFound}">
-            <TextBlock Text="{l:T Connect_NothingFound}" Foreground="{DynamicResource WarnFg}" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding NoPhone}">
+            <ProgressBar IsIndeterminate="True" Width="80" VerticalAlignment="Center" />
+            <TextBlock Classes="muted" Text="{l:T Connect_Waiting}" VerticalAlignment="Center" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- No cable: wireless debugging with a pairing code -->
+      <Border Classes="card" IsEnabled="{Binding !IsBusy}">
+        <StackPanel Spacing="14">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="h2" Text="{l:T Connect_PairTitle}" />
+            <TextBlock Classes="muted" Text="{l:T Connect_PairText}" />
+          </StackPanel>
+          <Border Classes="note" IsVisible="{Binding PairingSeen}">
+            <TextBlock Text="{l:T Connect_PairSeen}" TextWrapping="Wrap" FontWeight="SemiBold" />
           </Border>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" IsEnabled="{Binding !IsBusy}">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="4">
-            <TextBlock Classes="h2" Text="{l:T Connect_ManualTitle}" />
-            <TextBlock Classes="muted" Text="{l:T Connect_ManualText}" />
-          </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <TextBox Width="260" Watermark="192.168.1.20" Text="{Binding Address}" />
-            <Button Classes="accent" Content="{l:T Connect_Connect}" Command="{Binding ConnectManualCommand}" IsDefault="True" />
-          </StackPanel>
+          <WrapPanel>
+            <TextBox Width="140" Watermark="123456" Text="{Binding PairCode}" Margin="0,0,10,8" MaxLength="7" />
+            <TextBox Width="220" Watermark="192.168.1.20:37099" Text="{Binding PairAddress}" Margin="0,0,10,8" />
+            <Button Classes="accent" Content="{l:T Connect_Pair}" Command="{Binding PairCommand}" IsEnabled="{Binding !IsPairing}" Margin="0,0,0,8" />
+          </WrapPanel>
+          <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsPairing}" />
+          <TextBlock Classes="muted" Text="{Binding PairResult}" TextWrapping="Wrap"
+                     IsVisible="{Binding PairResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         </StackPanel>
       </Border>
 
       <Expander IsEnabled="{Binding !IsBusy}" HorizontalAlignment="Stretch">
         <Expander.Header>
-          <TextBlock Text="{l:T Connect_PairTitle}" FontWeight="SemiBold" />
+          <TextBlock Text="{l:T Connect_ManualTitle}" FontWeight="SemiBold" />
         </Expander.Header>
         <StackPanel Spacing="12" Margin="4,4,4,8">
-          <TextBlock Classes="muted" Text="{l:T Connect_PairText}" />
+          <TextBlock Classes="muted" Text="{l:T Connect_ManualText}" />
           <StackPanel Orientation="Horizontal" Spacing="10">
-            <TextBox Width="220" Watermark="192.168.1.20:37099" Text="{Binding PairAddress}" />
-            <TextBox Width="140" Watermark="123456" Text="{Binding PairCode}" />
-            <Button Content="{l:T Connect_Pair}" Command="{Binding PairCommand}" />
+            <TextBox Width="260" Watermark="192.168.1.20:41234" Text="{Binding ManualAddress}" />
+            <Button Content="{l:T Connect_Connect}" Command="{Binding ConnectManualCommand}" />
           </StackPanel>
-          <TextBlock Classes="muted" Text="{Binding PairResult}"
-                     IsVisible="{Binding PairResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         </StackPanel>
       </Expander>
     </StackPanel>

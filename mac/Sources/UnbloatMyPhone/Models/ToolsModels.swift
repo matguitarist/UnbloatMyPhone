@@ -14,11 +14,11 @@ struct HealthTip: Identifiable {
 /// Read-only check-up: memory, storage, processor, biggest apps, crash loops, with advice.
 @MainActor @Observable
 final class HealthModel {
-    let device: TvDevice
+    let device: PhoneDevice
     var isLoading = false
     var report: HealthReport?
 
-    init(device: TvDevice) {
+    init(device: PhoneDevice) {
         self.device = device
         Task { await refresh() }
     }
@@ -63,12 +63,12 @@ final class HealthModel {
 
 @MainActor @Observable
 final class InstallModel {
-    let device: TvDevice
+    let device: PhoneDevice
     var isInstalling = false
     var status = ""
     var statusIsError = false
 
-    init(device: TvDevice) { self.device = device }
+    init(device: PhoneDevice) { self.device = device }
 
     func install(_ url: URL) async {
         guard !isInstalling else { return }
@@ -88,57 +88,5 @@ final class InstallModel {
         status = ok ? L("Install_Done", url.lastPathComponent)
             : L("Install_Failed", r.all.components(separatedBy: "\n").last { $0.contains("Failure") || $0.contains("INSTALL_") } ?? r.all)
         isInstalling = false
-    }
-}
-
-// MARK: - Screen and remote
-
-/// Live view of the TV screen and a remote control.
-@MainActor @Observable
-final class RemoteModel {
-    let device: TvDevice
-    var screen: NSImage?
-    var isLive = true { didSet { isLive ? start() : stop() } }
-    var textToSend = ""
-    @ObservationIgnored private var loop: Task<Void, Never>?
-
-    init(device: TvDevice) { self.device = device }
-
-    func start() {
-        loop?.cancel()
-        let serial = device.serial
-        loop = Task { [weak self] in
-            while !Task.isCancelled {
-                if let png = await Adb.shared.runBinary(["-s", serial, "exec-out", "screencap", "-p"]), !Task.isCancelled {
-                    self?.screen = NSImage(data: png)
-                }
-                try? await Task.sleep(for: .milliseconds(400))
-            }
-        }
-    }
-
-    func stop() {
-        loop?.cancel()
-        loop = nil
-    }
-
-    func refreshOnce() async {
-        if let png = await Adb.shared.runBinary(["-s", device.serial, "exec-out", "screencap", "-p"]) { screen = NSImage(data: png) }
-    }
-
-    /// Android key codes: 19-22 arrows, 23 OK, 4 Back, 3 Home, 82 Menu, 85 Play/pause, 24/25 volume.
-    func key(_ code: Int) async {
-        _ = await Adb.shared.shell(device.serial, "input keyevent \(code)", timeout: 8)
-        if !isLive { await refreshOnce() }
-    }
-
-    /// Type into whatever text field is open on the TV (search boxes, passwords).
-    func sendText() async {
-        guard !textToSend.isEmpty else { return }
-        // "input text" takes %s for spaces; the rest is passed quoted.
-        let text = textToSend.replacingOccurrences(of: "%", with: "\\%").replacingOccurrences(of: " ", with: "%s")
-            .replacingOccurrences(of: "'", with: "'\\''")
-        _ = await Adb.shared.shell(device.serial, "input text '\(text)'", timeout: 15)
-        textToSend = ""
     }
 }

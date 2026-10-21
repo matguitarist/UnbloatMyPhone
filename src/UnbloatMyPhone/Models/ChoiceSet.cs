@@ -14,12 +14,12 @@ public sealed class SavedChoice
 }
 
 /// <summary>
-/// A set of ticked choices, to do the same on another TV. The last run's set is kept
+/// A set of ticked choices, to do the same on another phone. The last run's set is kept
 /// automatically; others can be saved to a file (same format in the Mac app).
 /// </summary>
 public sealed class ChoiceSet
 {
-    /// <summary>The TV the choices were made on.</summary>
+    /// <summary>The phone the choices were made on.</summary>
     public string Name { get; set; } = "";
     /// <summary>ISO 8601, kept as text so other apps read it easily.</summary>
     public string Created { get; set; } = "";
@@ -45,7 +45,7 @@ public sealed class ChoiceSet
         Choices = selected.Select(t => new SavedChoice { Id = t.Id, Option = t.SelectedOption?.Value }).ToList(),
     };
 
-    /// <summary>Tick exactly these choices. Returns how many exist on this TV.</summary>
+    /// <summary>Tick exactly these choices. Returns how many exist on this phone.</summary>
     public int ApplyTo(IEnumerable<Tweak> all)
     {
         var wanted = Choices.GroupBy(c => c.Id).ToDictionary(g => g.Key, g => g.First());

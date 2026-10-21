@@ -10,10 +10,10 @@ public sealed record TweakOption(LocText Label, string Value, IReadOnlyList<stri
     public override string ToString() => Label.ToString();
 }
 
-public sealed class ApplyContext(AdbService adb, TvDevice device, Backup backup)
+public sealed class ApplyContext(AdbService adb, PhoneDevice device, Backup backup)
 {
     public AdbService Adb { get; } = adb;
-    public TvDevice Device { get; } = device;
+    public PhoneDevice Device { get; } = device;
     public Backup Backup { get; } = backup;
     public string Serial => Device.Serial;
 }
@@ -119,41 +119,6 @@ public sealed class SettingsTweak : Tweak
     }
 }
 
-/// <summary>Cap the number of apps Android keeps cached in memory.</summary>
-public sealed class BackgroundLimitTweak : Tweak
-{
-    public override string Technical => "max_cached_processes";
-    public override IEnumerable<string> SettingKeys => ["max_cached_processes", "activity_manager_constants"];
-
-    public override async Task<TweakResult> ApplyAsync(ApplyContext ctx)
-    {
-        var value = SelectedOption?.Value ?? "16";
-        // Android 10+ reads it from device_config; older versions from a global setting.
-        // The catalog only offers it up to Android 9: Google Play services wipes device_config's
-        // activity_manager flags on its next sync, so it never lasts on 10+.
-        var ok = ctx.Device.Sdk >= 29
-            ? await SettingsIO.ChangeAsync(ctx, "device_config:activity_manager", "max_cached_processes", value)
-            : await SettingsIO.ChangeAsync(ctx, "global", "activity_manager_constants", $"max_cached_processes={value}");
-        return new TweakResult(ok);
-    }
-}
-
-/// <summary>Turn the Wi-Fi radio off. Only offered when the TV is on Ethernet.</summary>
-public sealed class WifiOffTweak : Tweak
-{
-    public override string Technical => "svc wifi disable";
-    public override IEnumerable<string> SettingKeys => ["wifi_on"];
-
-    public override async Task<TweakResult> ApplyAsync(ApplyContext ctx)
-    {
-        var before = await SettingsIO.GetAsync(ctx, "global", "wifi_on");
-        ctx.Backup.WifiWasOn = before != "0";
-        ctx.Backup.Save();
-        await ctx.Adb.ShellAsync(ctx.Serial, "svc wifi disable");
-        return new TweakResult(true);
-    }
-}
-
 /// <summary>
 /// Private DNS with a filtering provider. Checked straight away: if names stop resolving,
 /// the previous DNS setting is put back on its own.
@@ -180,7 +145,7 @@ public sealed class PrivateDnsTweak : Tweak
             if (ping.Output.Contains("PING ")) return new TweakResult(true, host);
         }
 
-        // Lookups fail: undo now rather than leave the TV offline.
+        // Lookups fail: undo now rather than leave the phone offline.
         await SettingsIO.RestoreAsync(ctx.Adb, ctx.Serial, "global", "private_dns_mode", oldMode);
         await SettingsIO.RestoreAsync(ctx.Adb, ctx.Serial, "global", "private_dns_specifier", oldHost);
         ctx.Backup.Settings.RemoveAll(s => s.Key is "private_dns_mode" or "private_dns_specifier");
@@ -198,11 +163,11 @@ public sealed class TrimCachesTweak : Tweak
 
     public override async Task<TweakResult> ApplyAsync(ApplyContext ctx)
     {
-        var before = await TvDevice.ReadStorageAsync(ctx.Adb, ctx.Serial);
+        var before = await PhoneDevice.ReadStorageAsync(ctx.Adb, ctx.Serial);
         var r = await ctx.Adb.ShellAsync(ctx.Serial, "pm trim-caches 999G", 120000);
         if (!r.Ok) return new TweakResult(false, PackageTweak.FirstLine(r.All));
         await Task.Delay(1500);
-        var after = await TvDevice.ReadStorageAsync(ctx.Adb, ctx.Serial);
+        var after = await PhoneDevice.ReadStorageAsync(ctx.Adb, ctx.Serial);
         var freed = Math.Max(0, after.FreeMb - before.FreeMb);
         return new TweakResult(true, Loc.Format("Apply_Freed", freed));
     }

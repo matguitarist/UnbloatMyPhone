@@ -22,16 +22,15 @@ final class Backup: Codable {
     var serialNo: String
     var androidVersion: String
     var disabledPackages: [String] = []
-    /// Apps a choice turned back on (e.g. for the screensaver); Restore turns them off again.
+    /// Apps a choice turned back on; Restore turns them off again.
     var enabledPackages: [String] = []
     var settings: [SettingChange] = []
-    var wifiWasOn: Bool?
 
     var fileURL: URL = URL(fileURLWithPath: "/")
 
     enum CodingKeys: String, CodingKey {
         case created = "Created", deviceName = "DeviceName", serialNo = "SerialNo", androidVersion = "AndroidVersion"
-        case disabledPackages = "DisabledPackages", enabledPackages = "EnabledPackages", settings = "Settings", wifiWasOn = "WifiWasOn"
+        case disabledPackages = "DisabledPackages", enabledPackages = "EnabledPackages", settings = "Settings"
     }
 
     // Older backups have no EnabledPackages.
@@ -44,27 +43,26 @@ final class Backup: Codable {
         disabledPackages = try c.decodeIfPresent([String].self, forKey: .disabledPackages) ?? []
         enabledPackages = try c.decodeIfPresent([String].self, forKey: .enabledPackages) ?? []
         settings = try c.decodeIfPresent([SettingChange].self, forKey: .settings) ?? []
-        wifiWasOn = try c.decodeIfPresent(Bool.self, forKey: .wifiWasOn)
     }
 
-    init(device: TvDevice) {
+    init(device: PhoneDevice) {
         created = DateText.now()
         deviceName = device.displayName
         serialNo = device.serialNo
         androidVersion = device.androidVersion
     }
 
-    var changeCount: Int { disabledPackages.count + enabledPackages.count + settings.count + (wifiWasOn == true ? 1 : 0) }
+    var changeCount: Int { disabledPackages.count + enabledPackages.count + settings.count }
     var createdDate: Date { DateText.parse(created) ?? .distantPast }
     var createdText: String { DateText.display(created) }
 
-    static func folder(for dev: TvDevice) -> URL {
+    static func folder(for dev: PhoneDevice) -> URL {
         let id = dev.serialNo.trimmingCharacters(in: .whitespaces).isEmpty ? dev.serial : dev.serialNo
         let safe = String("\(dev.displayName)-\(id)".map { $0.isLetter || $0.isNumber || $0 == "-" ? $0 : "_" })
         return AppPaths.backupDir.appendingPathComponent(safe, isDirectory: true)
     }
 
-    static func start(_ dev: TvDevice) -> Backup {
+    static func start(_ dev: PhoneDevice) -> Backup {
         let folder = folder(for: dev)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let b = Backup(device: dev)
@@ -82,7 +80,7 @@ final class Backup: Codable {
         try e.encode(self).write(to: fileURL, options: .atomic)
     }
 
-    static func list(for dev: TvDevice) -> [Backup] {
+    static func list(for dev: PhoneDevice) -> [Backup] {
         let folder = folder(for: dev)
         guard let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil) else { return [] }
         return files

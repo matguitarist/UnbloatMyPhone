@@ -49,10 +49,6 @@ struct ApplyView: View {
             .padding(6)
         }
 
-        if let home = apply.homeScreen, home.hasPlayStore, !apply.debugOff {
-            HomeScreenCard(home: home)
-        }
-
         Card(title: L("Apply_BackupTitle"), systemImage: "externaldrive") {
             Text(L("Apply_BackupText")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Text(apply.backupPath).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
@@ -132,50 +128,6 @@ struct StepList: View {
     }
 }
 
-struct HomeScreenCard: View {
-    var home: HomeScreenModel
-
-    var body: some View {
-        Card(title: L("Home_Title"), systemImage: "house") {
-            Text(L("Home_Text")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            ForEach(home.launchers) { l in
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 8) {
-                            Text(l.name).font(.body.weight(.semibold))
-                            if l.isCurrent { pill(L("Home_CurrentPill"), .green) }
-                            else if l.isInstalled { pill(L("Home_InstalledPill"), .accentColor) }
-                        }
-                        Text(l.description.text).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer()
-                    if l.canInstall { Button(L("Home_OpenStore")) { Task { await home.openStore(l) } } }
-                    if l.canInstallFromGitHub { Button(L("Home_InstallGitHub")) { Task { await home.installFromGitHub(l) } } }
-                    if l.canMakeHome {
-                        Button(L("Home_MakeHome")) { Task { await home.makeHome(l) } }.buttonStyle(.borderedProminent)
-                    }
-                }
-                .padding(8)
-                .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
-            }
-            if home.isBusy { ProgressView().progressViewStyle(.linear) }
-            if !home.status.isEmpty { Note(text: home.status) }
-            if home.isGoogleTv { Text(L("Home_GoogleTvNote")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
-            HStack {
-                Button(L("Home_CheckAgain")) { Task { await home.checkAgain() } }
-                if home.canRestoreOriginal { Button(L("Home_RestoreOriginal")) { Task { await home.restoreOriginal() } } }
-            }
-        }
-        .disabled(home.isBusy)
-    }
-
-    private func pill(_ text: String, _ color: Color) -> some View {
-        Text(text).font(.caption2.weight(.semibold)).foregroundStyle(color)
-            .padding(.horizontal, 6).padding(.vertical, 1)
-            .background(color.opacity(0.15), in: Capsule())
-    }
-}
-
 struct RestoreView: View {
     @Environment(AppModel.self) private var app
     var restore: RestoreModel
@@ -210,10 +162,6 @@ struct RestoreView: View {
                 Button(L("Restore_AllButton")) { Task { await restore.enableAll() } }
             }
             .disabled(restore.isBusy)
-
-            if restore.homeScreen.hasPlayStore {
-                HomeScreenCard(home: restore.homeScreen).disabled(restore.isBusy)
-            }
 
             Button(L("Common_Back")) { Task { await app.goChoose(reload: true) } }.disabled(restore.isBusy)
         }

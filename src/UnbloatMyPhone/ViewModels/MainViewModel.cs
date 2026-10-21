@@ -43,11 +43,11 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private PageViewModel _currentPage;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasDevice), nameof(DeviceName), nameof(DeviceAddress))]
-    private TvDevice? _device;
+    private PhoneDevice? _device;
 
     public bool HasDevice => Device is not null;
     public string DeviceName => Device?.DisplayName ?? "";
-    public string DeviceAddress => Device?.IpAddress ?? "";
+    public string DeviceAddress => Device?.ConnectionText ?? "";
 
     public MainViewModel(AdbService adb)
     {
@@ -67,17 +67,16 @@ public sealed partial class MainViewModel : ObservableObject
     {
         oldValue?.OnLeave();
         RefreshSteps();
-        foreach (var name in new[] { nameof(OnHealth), nameof(OnRemote), nameof(OnInstall), nameof(OnRestore) })
+        foreach (var name in new[] { nameof(OnHealth), nameof(OnInstall), nameof(OnRestore) })
             OnPropertyChanged(name);
     }
 
     // Which sidebar tool is open, to mark it.
     public bool OnHealth => CurrentPage is HealthViewModel;
-    public bool OnRemote => CurrentPage is RemoteViewModel;
     public bool OnInstall => CurrentPage is InstallViewModel;
     public bool OnRestore => CurrentPage is RestoreViewModel;
 
-    /// <summary>Changes are being made to the TV: don't let the user leave the page.</summary>
+    /// <summary>Changes are being made to the phone: don't let the user leave the page.</summary>
     public bool IsBusy => CurrentPage is ApplyViewModel { IsFinished: false } or RestoreViewModel { IsBusy: true };
 
     public void RefreshSteps()
@@ -87,7 +86,7 @@ public sealed partial class MainViewModel : ObservableObject
             s.IsActive = s.Number - 1 == CurrentPage.StepIndex;
             s.IsDone = s.Number - 1 < CurrentPage.StepIndex;
             // From a tool page (also step 3), "Choose" leads back to the list.
-            var onTool = CurrentPage is HealthViewModel or InstallViewModel or RemoteViewModel or RestoreViewModel;
+            var onTool = CurrentPage is HealthViewModel or InstallViewModel or RestoreViewModel;
             s.CanNavigate = (s.IsDone || (s.Number == 3 && onTool)) && !IsBusy && s.Number < 4 && (s.Number != 3 || HasDevice);
         }
     }
@@ -107,10 +106,10 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>Back to the first page with no TV connected, e.g. to clean another one.</summary>
+    /// <summary>Back to the first page with no phone connected, e.g. to clean another one.</summary>
     public async Task StartOverAsync()
     {
-        if (Device is { } d && d.Serial.Contains(':'))
+        if (Device is { } d && d.IsWireless)
             await Adb.RunAsync(["disconnect", d.Serial], 5000);
         Device = null;
         CurrentPage = new WelcomeViewModel(this);
@@ -121,7 +120,7 @@ public sealed partial class MainViewModel : ObservableObject
     public async Task GoChooseAsync(bool reload = false)
     {
         if (Device is null) { GoConnect(); return; }
-        if (reload) Device = await TvDevice.LoadAsync(Adb, Device.Serial);
+        if (reload) Device = await PhoneDevice.LoadAsync(Adb, Device.Serial);
         await Catalog.RefreshFromGitHubAsync(); // the app may have stayed open since the list changed
         CurrentPage = new ChooseViewModel(this, Device);
     }
@@ -153,18 +152,11 @@ public sealed partial class MainViewModel : ObservableObject
         if (Device is not null && !IsBusy) CurrentPage = new InstallViewModel(this, Device);
     }
 
-    [RelayCommand(CanExecute = nameof(HasDevice))]
-    private void GoRemote()
-    {
-        if (Device is not null && !IsBusy) CurrentPage = new RemoteViewModel(this, Device);
-    }
-
-    partial void OnDeviceChanged(TvDevice? value)
+    partial void OnDeviceChanged(PhoneDevice? value)
     {
         GoRestoreCommand.NotifyCanExecuteChanged();
         GoHealthCommand.NotifyCanExecuteChanged();
         GoInstallCommand.NotifyCanExecuteChanged();
-        GoRemoteCommand.NotifyCanExecuteChanged();
         RefreshSteps();
     }
 }

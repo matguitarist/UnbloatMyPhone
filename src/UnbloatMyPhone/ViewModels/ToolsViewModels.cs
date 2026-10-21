@@ -30,7 +30,7 @@ public sealed record ProcessRow(string Name, string Package, string Size)
 public sealed partial class HealthViewModel : PageViewModel
 {
     public override int StepIndex => 2;
-    public TvDevice Device { get; }
+    public PhoneDevice Device { get; }
 
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private HealthReport? _report;
@@ -40,7 +40,7 @@ public sealed partial class HealthViewModel : PageViewModel
     public ObservableCollection<ProcessRow> TopMemory { get; } = [];
 
     /// <param name="read">False only for screenshots, which set <see cref="Report"/> themselves.</param>
-    public HealthViewModel(MainViewModel main, TvDevice device, bool read = true) : base(main)
+    public HealthViewModel(MainViewModel main, PhoneDevice device, bool read = true) : base(main)
     {
         Device = device;
         if (read) _ = RefreshAsync();
@@ -77,7 +77,7 @@ public sealed partial class HealthViewModel : PageViewModel
     {
         IsLoading = true;
         Error = "";
-        try { Report = await TvHealth.ReadAsync(Main.Adb, Device.Serial); }
+        try { Report = await PhoneHealth.ReadAsync(Main.Adb, Device.Serial); }
         catch (Exception ex) { Error = ex.Message; }
         finally { IsLoading = false; }
     }
@@ -112,10 +112,10 @@ public sealed partial class HealthViewModel : PageViewModel
 }
 
 /// <summary>Install an .apk from this computer.</summary>
-public sealed partial class InstallViewModel(MainViewModel main, TvDevice device) : PageViewModel(main)
+public sealed partial class InstallViewModel(MainViewModel main, PhoneDevice device) : PageViewModel(main)
 {
     public override int StepIndex => 2;
-    public TvDevice Device { get; } = device;
+    public PhoneDevice Device { get; } = device;
 
     [ObservableProperty] private bool _isInstalling;
     [ObservableProperty] private string _status = "";
@@ -156,88 +156,5 @@ public sealed partial class InstallViewModel(MainViewModel main, TvDevice device
                 : Loc.Format("Install_Failed", r.All.Split('\n').LastOrDefault(l => l.Contains("Failure") || l.Contains("INSTALL_")) ?? r.All);
         }
         finally { IsInstalling = false; }
-    }
-}
-
-/// <summary>Live view of the TV screen and a remote control.</summary>
-public sealed partial class RemoteViewModel : PageViewModel
-{
-    public override int StepIndex => 2;
-    public TvDevice Device { get; }
-
-    [ObservableProperty] private Bitmap? _screen;
-    [ObservableProperty] private bool _isLive = true;
-    [ObservableProperty] private string _textToSend = "";
-
-    private CancellationTokenSource? _cts;
-
-    /// <param name="live">False only for screenshots, which set <see cref="Screen"/> themselves.</param>
-    public RemoteViewModel(MainViewModel main, TvDevice device, bool live = true) : base(main)
-    {
-        Device = device;
-        _isLive = live;
-        if (live) StartLive();
-    }
-
-    partial void OnIsLiveChanged(bool value)
-    {
-        if (value) StartLive();
-        else _cts?.Cancel();
-    }
-
-    public override void OnLeave() => _cts?.Cancel();
-
-    private void StartLive()
-    {
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        var ct = _cts.Token;
-        _ = Task.Run(async () =>
-        {
-            while (!ct.IsCancellationRequested)
-            {
-                var png = await Main.Adb.RunBinaryAsync(["-s", Device.Serial, "exec-out", "screencap", "-p"]);
-                if (png is not null && !ct.IsCancellationRequested)
-                {
-                    var bmp = new Bitmap(new MemoryStream(png));
-                    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        var old = Screen;
-                        Screen = bmp;
-                        old?.Dispose();
-                    });
-                }
-                try { await Task.Delay(400, ct); } catch (OperationCanceledException) { }
-            }
-        }, ct);
-    }
-
-    /// <summary>Android key codes: 19-22 arrows, 23 OK, 4 Back, 3 Home, 82 Menu, 85 Play/pause, 24/25 volume, 164 mute.</summary>
-    [RelayCommand]
-    public async Task KeyAsync(string code)
-    {
-        await Main.Adb.ShellAsync(Device.Serial, $"input keyevent {code}", 8000);
-        if (!IsLive) await RefreshOnceAsync();
-    }
-
-    [RelayCommand]
-    private async Task RefreshOnceAsync()
-    {
-        var png = await Main.Adb.RunBinaryAsync(["-s", Device.Serial, "exec-out", "screencap", "-p"]);
-        if (png is null) return;
-        var old = Screen;
-        Screen = new Bitmap(new MemoryStream(png));
-        old?.Dispose();
-    }
-
-    /// <summary>Type into whatever text field is open on the TV (search boxes, passwords).</summary>
-    [RelayCommand]
-    private async Task SendTextAsync()
-    {
-        if (TextToSend.Length == 0) return;
-        // "input text" takes %s for spaces; the rest is passed quoted.
-        var text = TextToSend.Replace("%", "\\%").Replace(" ", "%s").Replace("'", "'\\''");
-        await Main.Adb.ShellAsync(Device.Serial, $"input text '{text}'", 15000);
-        TextToSend = "";
     }
 }

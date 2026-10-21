@@ -12,7 +12,7 @@ final class AppUpdater: NSObject {
     @ObservationIgnored private var observation: NSKeyValueObservation?
     @ObservationIgnored private var pendingRelaunch: (() -> Void)?
 
-    /// Tells Sparkle the app is in the middle of changing a TV, so a relaunch can wait.
+    /// Tells Sparkle the app is in the middle of changing a phone, so a relaunch can wait.
     @ObservationIgnored var isBusy: () -> Bool = { false }
 
     var canCheckForUpdates = false
@@ -32,7 +32,7 @@ final class AppUpdater: NSObject {
 
     func checkForUpdates() { controller.checkForUpdates(nil) }
 
-    /// Called while a TV is being changed: install once it's done instead of cutting it off.
+    /// Called while a phone is being changed: install once it's done instead of cutting it off.
     private func relaunchWhenIdle() {
         guard let pending = pendingRelaunch else { return }
         if isBusy() {

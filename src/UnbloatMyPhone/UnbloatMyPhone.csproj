@@ -14,7 +14,7 @@
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <Version>0.1.0</Version>
     <Product>UnbloatMyPhone</Product>
-    <Description>Disable bloatware, ads and tracking on Android TV and Google TV, with a one-click restore.</Description>
+    <Description>Disable bloatware and tracking on Android phones, with a one-click restore.</Description>
     <Copyright>MIT License</Copyright>
   </PropertyGroup>
 

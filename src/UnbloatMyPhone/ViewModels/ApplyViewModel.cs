@@ -28,7 +28,7 @@ public sealed partial class StepItem(string text) : ObservableObject
     partial void OnDetailChanged(string value) => OnPropertyChanged(nameof(HasDetail));
 }
 
-public sealed partial class ApplyViewModel(MainViewModel main, TvDevice device, List<Tweak> selected, bool reboot)
+public sealed partial class ApplyViewModel(MainViewModel main, PhoneDevice device, List<Tweak> selected, bool reboot)
     : PageViewModel(main)
 {
     public override int StepIndex => IsFinished ? 4 : 3;
@@ -47,10 +47,9 @@ public sealed partial class ApplyViewModel(MainViewModel main, TvDevice device, 
     [ObservableProperty] private string _backupPath = "";
     [ObservableProperty] private int _appsOff;
     [ObservableProperty] private int _settingsChanged;
-    [ObservableProperty] private HomeScreenViewModel? _homeScreen;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(StillConnected), nameof(ShowHomeScreen))]
+    [NotifyPropertyChangedFor(nameof(StillConnected))]
     private bool _debugOff;
 
     [ObservableProperty] private bool _isTurningOffDebug;
@@ -58,8 +57,6 @@ public sealed partial class ApplyViewModel(MainViewModel main, TvDevice device, 
 
     public bool HasProblems => ProblemCount > 0;
     public bool StillConnected => !DebugOff;
-    public bool ShowHomeScreen => HomeScreen is { HasPlayStore: true } && !DebugOff;
-    partial void OnHomeScreenChanged(HomeScreenViewModel? value) => OnPropertyChanged(nameof(ShowHomeScreen));
 
     public string CheckValue => ProblemCount == 0 ? "OK" : ProblemCount.ToString();
     public string CheckLabel => Loc.Get(ProblemCount > 0 ? "Apply_StatProblems" : reboot ? "Apply_StatChecks" : "Apply_StatChecksNoReboot");
@@ -81,10 +78,9 @@ public sealed partial class ApplyViewModel(MainViewModel main, TvDevice device, 
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(Subtitle));
         OnPropertyChanged(nameof(CheckLabel));
-        HomeScreen?.RefreshTexts();
     }
 
-    private TvDevice _device = device;
+    private PhoneDevice _device = device;
 
     public async Task RunAsync()
     {
@@ -118,7 +114,7 @@ public sealed partial class ApplyViewModel(MainViewModel main, TvDevice device, 
         }
         Tick();
 
-        // 2. Changes, packages first so the screensaver fix below can see what went.
+        // 2. Changes, packages first.
         var ctx = new ApplyContext(Main.Adb, _device, backup);
         var kept = selected.SelectMany(t => t.KeptPackages).ToHashSet();
         foreach (var (tweak, step) in tweakSteps.OrderBy(x => x.tweak is PackageTweak ? 0 : 1))
@@ -150,15 +146,7 @@ public sealed partial class ApplyViewModel(MainViewModel main, TvDevice device, 
             Tick();
         }
 
-        // If the active screensaver's app was just turned off, switch to the simple one.
-        var dreamPkg = _device.ScreensaverComponent.Split('/')[0];
-        if (dreamPkg.Length > 0 && backup.DisabledPackages.Contains(dreamPkg) && _device.IsInstalled("com.android.dreams.basic"))
-        {
-            await SettingsIO.ChangeAsync(ctx, "secure", "screensaver_components", Catalog.BasicScreensaver);
-            backup.Save();
-        }
-
-        // 3. Restart and wait for the TV to come back.
+        // 3. Restart and wait for the phone to come back.
         if (rebootStep is not null)
         {
             rebootStep.State = StepState.Running;
@@ -178,12 +166,8 @@ public sealed partial class ApplyViewModel(MainViewModel main, TvDevice device, 
 
         IsFinished = true;
         Main.RefreshSteps();
-        try
-        {
-            Main.Device = _device = await TvDevice.LoadAsync(Main.Adb, _device.Serial);
-            HomeScreen = new HomeScreenViewModel(Main, _device);
-        }
-        catch { /* the TV went away; the summary above still stands */ }
+        try { Main.Device = _device = await PhoneDevice.LoadAsync(Main.Adb, _device.Serial); }
+        catch { /* the phone went away; the summary above still stands */ }
     }
 
     private StepItem Add(string text)
@@ -216,15 +200,15 @@ public sealed partial class ApplyViewModel(MainViewModel main, TvDevice device, 
 
     private async Task<bool> RebootAndWaitAsync(StepItem step)
     {
-        var serial = _device.Serial;
-        await Main.Adb.RunAsync(["-s", serial, "reboot"], 15000);
+        await Main.Adb.RunAsync(["-s", _device.Serial, "reboot"], 15000);
         await Task.Delay(8000);
         var deadline = DateTime.UtcNow.AddMinutes(4);
         while (DateTime.UtcNow < deadline)
         {
-            if (serial.Contains(':')) await Main.Adb.RunAsync(["connect", serial], 10000);
-            if (await Main.Adb.GetStateAsync(serial) == "device")
+            // Over Wi-Fi the phone comes back on another port.
+            if (await Main.Adb.FindAgainAsync(_device.Serial, _device.SerialNo) is { } serial)
             {
+                if (serial != _device.Serial) _device = await PhoneDevice.LoadAsync(Main.Adb, serial);
                 var boot = await Main.Adb.ShellAsync(serial, "getprop sys.boot_completed", 8000);
                 if (boot.Output.Trim() == "1")
                 {
@@ -282,8 +266,8 @@ public sealed partial class ApplyViewModel(MainViewModel main, TvDevice device, 
     private Task StartOverAsync() => Main.StartOverAsync();
 
     /// <summary>
-    /// Turns USB and network debugging off from here. adbd stops as soon as the setting is
-    /// written, so success is "the TV no longer answers", not the command's output.
+    /// Turns USB and wireless debugging off from here. adbd stops as soon as the setting is
+    /// written, so success is "the phone no longer answers", not the command's output.
     /// </summary>
     [RelayCommand]
     private async Task TurnOffDebuggingAsync()
@@ -295,7 +279,8 @@ public sealed partial class ApplyViewModel(MainViewModel main, TvDevice device, 
         {
             await Main.Adb.ShellAsync(serial, "settings put global adb_wifi_enabled 0; settings put global adb_enabled 0", 8000);
             await Task.Delay(3000);
-            if (serial.Contains(':'))
+            var wireless = AdbService.IsWirelessSerial(serial);
+            if (wireless)
             {
                 await Main.Adb.RunAsync(["disconnect", serial], 5000);
                 await Main.Adb.RunAsync(["connect", serial], 8000);
@@ -303,7 +288,7 @@ public sealed partial class ApplyViewModel(MainViewModel main, TvDevice device, 
             DebugOff = await Main.Adb.GetStateAsync(serial) != "device";
             if (DebugOff)
             {
-                if (serial.Contains(':')) await Main.Adb.RunAsync(["disconnect", serial], 5000);
+                if (wireless) await Main.Adb.RunAsync(["disconnect", serial], 5000);
                 Main.Device = null;
             }
             DebugStatus = Loc.Get(DebugOff ? "Apply_DebugOffDone" : "Apply_DebugOffFailed");

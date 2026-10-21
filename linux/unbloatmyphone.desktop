@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=UnbloatMyPhone
-Comment=Turn off the ads, tracking and preinstalled apps on Android TV, Google TV and Fire TV
-Comment[fr]=Désactiver les publicités, le pistage et les applications préinstallées d'Android TV, Google TV et Fire TV
+Comment=Turn off the preinstalled apps and tracking you don't use on an Android phone
+Comment[fr]=Désactiver les applications préinstallées et le pistage inutiles d'un téléphone Android
 Exec=UnbloatMyPhone
 Icon=unbloatmyphone
 Categories=Utility;

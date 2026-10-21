@@ -38,6 +38,6 @@
   <key>SUEnableAutomaticChecks</key>
   <true/>
   <key>NSLocalNetworkUsageDescription</key>
-  <string>UnbloatMyPhone looks for your TV on the home network and connects to it to make the changes you choose.</string>
+  <string>UnbloatMyPhone finds your phone on the Wi-Fi when you use wireless debugging, and connects to it to make the changes you choose.</string>
 </dict>
 </plist>

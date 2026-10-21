@@ -38,12 +38,11 @@ public sealed partial class TweakGroup : ObservableObject
 }
 
 /// <summary>
-/// Builds the list of choices for one TV from shared/catalog.json: the copy built into the app,
+/// Builds the list of choices for one phone from shared/catalog.json: the copy built into the app,
 /// or a newer one downloaded from GitHub (same file the Mac app uses).
 /// </summary>
 public static class Catalog
 {
-    public const string BasicScreensaver = "com.android.dreams.basic/com.android.dreams.basic.Colors";
     /// <summary>Catalog format this version understands.</summary>
     private const int Schema = 1;
     private const string RemoteUrl = "https://raw.githubusercontent.com/matguitarist/UnbloatMyPhone/main/shared/catalog.json";
@@ -79,9 +78,7 @@ public static class Catalog
     {
         public int? MinSdk { get; set; }
         public int? MaxSdk { get; set; }
-        public string? Network { get; set; }
         public string? Installed { get; set; }
-        public string? ScreensaverIsNot { get; set; }
         public int? StorageFreeBelowPercent { get; set; }
     }
     private sealed class SettingDef
@@ -123,7 +120,6 @@ public static class Catalog
             var c = JsonSerializer.Deserialize<CatalogFile>(json, Json);
             if (c is null || c.Schema != Schema || c.Groups.Count == 0) return null;
             var groups = c.Groups.Select(g => g.Id).ToHashSet();
-            if (!groups.Contains("other")) return null;
             if (c.Packages.Any(p => !groups.Contains(p.Group) || (p.Id is null && string.IsNullOrEmpty(p.Prefix)))) return null;
             if (c.Settings.Any(s => !groups.Contains(s.Group))) return null;
             return c;
@@ -157,7 +153,7 @@ public static class Catalog
 
     private static DateTime _lastRefresh = DateTime.MinValue;
 
-    /// <summary>Fetch the latest list from GitHub; it is used from the next TV list on.
+    /// <summary>Fetch the latest list from GitHub; it is used from the next phone list on.
     /// Called at start and before each Choose page, at most once a minute.</summary>
     public static async Task RefreshFromGitHubAsync()
     {
@@ -192,8 +188,8 @@ public static class Catalog
         return null;
     }
 
-    /// <summary>Whether the Choose page would offer to turn this app off on this TV.</summary>
-    public static bool IsOffered(TvDevice dev, string pkg) =>
+    /// <summary>Whether the Choose page would offer to turn this app off on this phone.</summary>
+    public static bool IsOffered(PhoneDevice dev, string pkg) =>
         dev.Enabled.Contains(pkg) && !dev.IsProtected(pkg) && !IsKeep(pkg) &&
         _current.Packages.Any(p => p.Id == pkg || (p.Prefix is { Length: > 0 } pre && pkg.StartsWith(pre)));
 
@@ -201,7 +197,7 @@ public static class Catalog
         c.Keep.Any(k => k.Id == pkg) ||
         c.Packages.Any(p => p.Id == pkg || (p.Prefix is { Length: > 0 } pre && pkg.StartsWith(pre)));
 
-    public static List<TweakGroup> Build(TvDevice dev)
+    public static List<TweakGroup> Build(PhoneDevice dev)
     {
         var c = _current;
         var groups = c.Groups.Select(g => new TweakGroup
@@ -211,7 +207,7 @@ public static class Catalog
 
         var used = new HashSet<string>();
 
-        // Apps from the catalog, only those installed, enabled and not protected on this TV.
+        // Apps from the catalog, only those installed, enabled and not protected on this phone.
         foreach (var def in c.Packages)
         {
             if (def.RequiresSetupComplete && !dev.SetupComplete) continue;
@@ -231,18 +227,6 @@ public static class Catalog
             }
         }
 
-        // Apps installed on top of the system that the catalog doesn't know.
-        foreach (var pkg in dev.ThirdParty.Where(dev.Enabled.Contains).OrderBy(p => p))
-        {
-            if (used.Contains(pkg) || dev.IsProtected(pkg) || c.Keep.Any(k => k.Id == pkg)) continue;
-            groups["other"].Tweaks.Add(new PackageTweak
-            {
-                Id = "pkg:" + pkg, GroupId = "other", Package = pkg, Recommended = false,
-                TitleText = new LocText(FriendlyName(pkg), FriendlyName(pkg)),
-                DescriptionText = new LocText("Installed app.", "Application installée."),
-            });
-        }
-
         foreach (var def in c.Settings)
             if (Matches(def.When, dev) && CreateSetting(def, dev) is { } tweak)
                 groups[def.Group].Tweaks.Add(tweak);
@@ -257,21 +241,18 @@ public static class Catalog
         return list;
     }
 
-    private static bool Matches(WhenDef? w, TvDevice dev)
+    private static bool Matches(WhenDef? w, PhoneDevice dev)
     {
         if (w is null) return true;
         if (w.MinSdk is { } sdk && dev.Sdk < sdk) return false;
         if (w.MaxSdk is { } max && dev.Sdk > max) return false;
-        if (w.Network == "ethernet" && dev.Network != NetworkKind.Ethernet) return false;
-        if (w.Network == "wifi" && dev.Network != NetworkKind.WiFi) return false;
         if (w.Installed is { } pkg && !dev.IsInstalled(pkg)) return false;
-        if (w.ScreensaverIsNot is { } dream && dev.ScreensaverComponent == dream) return false;
         if (w.StorageFreeBelowPercent is { } pct && (dev.StorageTotalMb == 0 || dev.StorageFreeMb * 100 >= dev.StorageTotalMb * pct)) return false;
         return true;
     }
 
     /// <summary>A setting from the catalog, or null for a kind this version doesn't know.</summary>
-    private static Tweak? CreateSetting(SettingDef def, TvDevice dev)
+    private static Tweak? CreateSetting(SettingDef def, PhoneDevice dev)
     {
         var description = L(def.Description);
         if (description.En.Contains("{storage}"))
@@ -292,35 +273,15 @@ public static class Catalog
                 DescriptionText = description, WarningText = warning, Options = options,
                 Writes = def.Writes.Select(w => new SettingWrite(w.Namespace, w.Key, w.Value)).ToList(),
             },
-            // A choice of screensaver, starting on the current one. Nothing to choose: not offered.
-            "screensaver" when def.Writes is { Count: > 0 } && options is { Count: > 0 }
-                               && !(options.Count == 1 && options[0].Value == dev.ScreensaverComponent) => new SettingsTweak
-            {
-                Id = def.Id, GroupId = def.Group, Recommended = recommended, TitleText = title,
-                DescriptionText = description, WarningText = warning, Options = options,
-                SelectedOption = recommended ? options[0]
-                    : options.FirstOrDefault(o => o.Value == dev.ScreensaverComponent) ?? options[0],
-                Writes = def.Writes.Select(w => new SettingWrite(w.Namespace, w.Key, w.Value)).ToList(),
-            },
             "optimizeApps" => new OptimizeAppsTweak
             {
                 Id = def.Id, GroupId = def.Group, Recommended = recommended, TitleText = title,
                 DescriptionText = description, WarningText = warning,
             },
-            "backgroundLimit" => new BackgroundLimitTweak
-            {
-                Id = def.Id, GroupId = def.Group, Recommended = recommended, TitleText = title,
-                DescriptionText = description, WarningText = warning, Options = options,
-            },
             "privateDns" => new PrivateDnsTweak
             {
                 Id = def.Id, GroupId = def.Group, Recommended = recommended, TitleText = title,
                 DescriptionText = description, WarningText = warning, Options = options,
-            },
-            "wifiOff" => new WifiOffTweak
-            {
-                Id = def.Id, GroupId = def.Group, Recommended = recommended, TitleText = title,
-                DescriptionText = description, WarningText = warning,
             },
             "trimCaches" when dev.StorageTotalMb > 0 => new TrimCachesTweak
             {
@@ -331,7 +292,7 @@ public static class Catalog
         };
     }
 
-    private static string StorageText(TvDevice dev, string lang)
+    private static string StorageText(PhoneDevice dev, string lang)
     {
         var culture = CultureInfo.GetCultureInfo(lang);
         string Gb(long mb) => (mb / 1024.0).ToString("0.0", culture);
@@ -350,19 +311,13 @@ public static class Catalog
     /// Preinstalled apps the catalog doesn't know yet, for the "help improve the list" report.
     /// Android's own parts, chip vendor parts and resource overlays are left out.
     /// </summary>
-    public static List<string> UnknownSystemApps(TvDevice dev) =>
+    public static List<string> UnknownSystemApps(PhoneDevice dev) =>
         dev.Enabled.Concat(dev.Disabled)
             .Where(p => !dev.ThirdParty.Contains(p) && !dev.IsProtected(p) && !IsKnown(_current, p))
-            .Where(p => !CorePrefixes.Any(p.StartsWith) && p != "android")
+            // Google's own apps (com.google.android.apps.*) are worth reporting; its system parts are not.
+            .Where(p => (!CorePrefixes.Any(p.StartsWith) || p.StartsWith("com.google.android.apps.")) && p != "android")
             .Where(p => !p.Contains("overlay", StringComparison.OrdinalIgnoreCase) && !p.Contains("auto_generated_rro")
                         && !p.EndsWith("rro", StringComparison.OrdinalIgnoreCase))
             .OrderBy(p => p)
             .ToList();
-
-    private static string FriendlyName(string pkg)
-    {
-        var parts = pkg.Split('.');
-        var last = parts.Length > 1 && parts[^1] is "android" or "tv" or "app" or "androidtv" ? parts[^2] : parts[^1];
-        return last.Length == 0 ? pkg : char.ToUpperInvariant(last[0]) + last[1..];
-    }
 }

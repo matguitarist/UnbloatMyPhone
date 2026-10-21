@@ -9,7 +9,7 @@ struct ChooseView: View {
 
     var body: some View {
         Form {
-            // The TV
+            // The phone
             Section {
                 HStack(alignment: .center, spacing: 14) {
                     Image(systemName: "tv").font(.system(size: 28)).foregroundStyle(.tint).frame(width: 40)
@@ -18,35 +18,9 @@ struct ChooseView: View {
                         Text(choose.infoLine).font(.callout).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button(L("Choose_ChangeTv")) { app.goConnect() }
+                    Button(L("Choose_ChangePhone")) { app.goConnect() }
                 }
                 .padding(.vertical, 4)
-            }
-
-            // Fire TV: Amazon's apps can't be turned off; its tracking is in the TV's menu
-            if choose.device.isFireTv {
-                Section {
-                    HStack(alignment: .top, spacing: 14) {
-                        Image(systemName: "exclamationmark.shield").font(.title2).foregroundStyle(.tint).frame(width: 40)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L("Fire_Title")).font(.headline)
-                            Text(L("Fire_Text")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                            if let on = choose.firePrivacyOn {
-                                Text(choose.firePrivacyText)
-                                    .fontWeight(on.isEmpty ? .regular : .semibold)
-                                    .foregroundStyle(on.isEmpty ? .green : .orange)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                HStack {
-                                    if !on.isEmpty {
-                                        Button(L("Fire_Open")) { Task { await FirePrivacy.openOnTv(Adb.shared, serial: choose.device.serial) } }
-                                    }
-                                    Button(L("Home_CheckAgain")) { Task { await choose.checkFirePrivacy() } }
-                                }
-                            }
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
             }
 
             // Things an update turned back on
@@ -69,7 +43,7 @@ struct ChooseView: View {
                 }
             }
 
-            // Same choices as last time, e.g. on the other TV
+            // Same choices as last time, e.g. on the other phone
             if let last = choose.lastChoices {
                 Section {
                     HStack(spacing: 14) {
@@ -159,7 +133,7 @@ struct ChooseView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                // Deliberately no Return shortcut: a stray key press must never change the TV.
+                // Deliberately no Return shortcut: a stray key press must never change the phone.
                 .disabled(choose.selectedCount == 0)
             }
             .padding(.horizontal, 20)

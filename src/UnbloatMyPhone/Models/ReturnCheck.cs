@@ -10,8 +10,8 @@ public sealed record ReturnedItems(DateTime Since, List<string> Packages, List<S
 
 public static class ReturnCheck
 {
-    /// <summary>Compare the TV with the backups of runs that weren't undone. Read-only.</summary>
-    public static async Task<ReturnedItems?> FindAsync(AdbService adb, TvDevice dev)
+    /// <summary>Compare the phone with the backups of runs that weren't undone. Read-only.</summary>
+    public static async Task<ReturnedItems?> FindAsync(AdbService adb, PhoneDevice dev)
     {
         var runs = Backup.ListFor(dev); // newest first, undone runs excluded
         if (runs.Count == 0) return null;
@@ -26,8 +26,6 @@ public static class ReturnCheck
         foreach (var run in runs)
             foreach (var s in run.Settings)
                 wanted.TryAdd((s.Namespace, s.Key), s);
-        if (runs.Any(r => r.WifiWasOn == true))
-            wanted.TryAdd(("global", "wifi_on"), new SettingChange { Namespace = "global", Key = "wifi_on", NewValue = "0" });
 
         // One shell call reads them all: "@@<n>" before each value.
         var list = wanted.Values.ToList();
@@ -51,9 +49,7 @@ public static class ReturnCheck
             for (var i = 0; i < list.Count; i++)
             {
                 var now = values.GetValueOrDefault(i, "");
-                // wifi_on: anything but "0" means the radio is back on.
-                var changedBack = list[i].Key == "wifi_on" ? now != "0" : now != list[i].NewValue;
-                if (changedBack && now.Length > 0) settings.Add(list[i]);
+                if (now != list[i].NewValue && now.Length > 0) settings.Add(list[i]);
             }
         }
 

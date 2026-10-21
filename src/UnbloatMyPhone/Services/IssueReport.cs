@@ -11,7 +11,7 @@ public static class IssueReport
     private const int MaxUrl = 7000;
 
     /// <returns>The link, and whether every package fit in it.</returns>
-    public static (string Url, bool Complete) Build(TvDevice dev, IReadOnlyList<string> packages, int catalogVersion)
+    public static (string Url, bool Complete) Build(PhoneDevice dev, IReadOnlyList<string> packages, int catalogVersion)
     {
         var title = $"Unknown apps on {dev.DisplayName} (Android {dev.AndroidVersion})";
         string Body(int count, int left)

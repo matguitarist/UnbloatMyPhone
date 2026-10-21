@@ -2,10 +2,8 @@ using UnbloatMyPhone.Services;
 
 namespace UnbloatMyPhone.Models;
 
-public enum NetworkKind { Unknown, Ethernet, WiFi }
-
-/// <summary>What we know about the connected TV. Read-only queries only.</summary>
-public sealed class TvDevice
+/// <summary>What we know about the connected phone. Read-only queries only.</summary>
+public sealed class PhoneDevice
 {
     public required string Serial { get; init; }
     public string Manufacturer { get; init; } = "";
@@ -13,16 +11,14 @@ public sealed class TvDevice
     public string Model { get; init; } = "";
     public string SerialNo { get; init; } = "";
     public string AndroidVersion { get; init; } = "";
-    /// <summary>"Fire OS 7.6.8.8 (PS7688/4591)" on Fire TV, empty elsewhere.</summary>
-    public string FireOsVersion { get; init; } = "";
     public int Sdk { get; init; }
     public long RamMb { get; init; }
-    public NetworkKind Network { get; init; }
     public string HomePackage { get; init; } = "";
     /// <summary>Every app that can act as the home screen, not just the current one.</summary>
     public HashSet<string> HomeCapable { get; init; } = [];
     public string InputMethodPackage { get; init; } = "";
-    public string ScreensaverComponent { get; init; } = "";
+    /// <summary>The default Phone and SMS apps: turning them off would leave the phone unable to call or text.</summary>
+    public HashSet<string> RoleHolders { get; init; } = [];
     public bool SetupComplete { get; init; }
     public long StorageTotalMb { get; init; }
     public long StorageFreeMb { get; init; }
@@ -31,59 +27,55 @@ public sealed class TvDevice
     public HashSet<string> Disabled { get; init; } = [];
     public HashSet<string> ThirdParty { get; init; } = [];
 
-    /// <summary>Amazon Fire TV: Fire OS refuses to switch off Amazon's own apps.</summary>
-    public bool IsFireTv => Manufacturer.Equals("Amazon", StringComparison.OrdinalIgnoreCase);
-
     public bool IsInstalled(string pkg) => Enabled.Contains(pkg) || Disabled.Contains(pkg);
 
     public string DisplayName
     {
         get
         {
-            if (IsFireTv) return FireModels.GetValueOrDefault(Model, "Fire TV " + Model);
-            var maker = string.IsNullOrWhiteSpace(Brand) ? Manufacturer : Brand;
+            var maker = string.IsNullOrWhiteSpace(Manufacturer) ? Brand : Manufacturer;
+            if (maker.Length > 0) maker = char.ToUpperInvariant(maker[0]) + maker[1..];
             return Model.StartsWith(maker, StringComparison.OrdinalIgnoreCase) || maker.Length == 0
                 ? Model
                 : $"{maker} {Model}";
         }
     }
 
-    /// <summary>Fire TV model codes are not shown anywhere on the device.</summary>
-    private static readonly Dictionary<string, string> FireModels = new()
-    {
-        ["AFTKA"] = "Fire TV Stick 4K Max", ["AFTKRT"] = "Fire TV Stick 4K Max (2nd gen)",
-        ["AFTMM"] = "Fire TV Stick 4K", ["AFTKM"] = "Fire TV Stick 4K (2nd gen)",
-        ["AFTSSS"] = "Fire TV Stick (3rd gen)", ["AFTSS"] = "Fire TV Stick Lite",
-        ["AFTR"] = "Fire TV Cube (2nd gen)", ["AFTGAZL"] = "Fire TV Cube (3rd gen)",
-    };
+    /// <summary>Connected over Wi-Fi ("192.168.1.20:41234", or the name wireless debugging announces).</summary>
+    public bool IsWireless => AdbService.IsWirelessSerial(Serial);
 
-    public string IpAddress => Serial.Contains(':') ? Serial[..Serial.LastIndexOf(':')] : Serial;
+    /// <summary>Shown under the phone's name: its address on Wi-Fi, "USB" otherwise.</summary>
+    public string ConnectionText => !IsWireless ? "USB"
+        : Serial.Contains(':') ? Serial[..Serial.LastIndexOf(':')] : "Wi-Fi";
 
     /// <summary>Packages that must never be disabled, whatever the catalog says.</summary>
     public bool IsProtected(string pkg) =>
-        pkg == HomePackage || HomeCapable.Contains(pkg) || pkg == InputMethodPackage || ProtectedPackages.Contains(pkg) ||
-        (IsFireTv && FireProtectedPrefixes.Any(pkg.StartsWith));
-
-    /// <summary>Fire OS answers "Cannot disable a protected package" for Amazon's apps.</summary>
-    private static readonly string[] FireProtectedPrefixes = ["com.amazon.", "amazon.", "android.amazon.", "com.fireos.", "com.ivona."];
+        pkg == HomePackage || HomeCapable.Contains(pkg) || pkg == InputMethodPackage || RoleHolders.Contains(pkg) ||
+        ProtectedPackages.Contains(pkg);
 
     private static readonly HashSet<string> ProtectedPackages =
     [
-        "android", "com.android.systemui", "com.android.settings", "com.android.tv.settings",
-        "com.android.providers.settings", "com.android.providers.tv", "com.android.bluetooth",
+        "android", "com.android.systemui", "com.android.settings", "com.android.providers.settings",
         "com.android.shell", "com.android.packageinstaller", "com.google.android.packageinstaller",
         "com.google.android.gms", "com.google.android.gsf", "com.android.vending",
-        "com.google.android.webview", "com.android.webview", "com.google.android.tvlauncher",
-        "com.google.android.apps.tv.launcherx", "com.google.android.leanbacklauncher",
-        "com.android.tv", "com.google.android.permissioncontroller", "com.android.permissioncontroller",
-        "com.google.android.inputmethod.latin", "com.android.inputdevices",
+        "com.google.android.webview", "com.android.webview", "com.google.android.trichromelibrary",
+        "com.google.android.permissioncontroller", "com.android.permissioncontroller",
+        "com.android.phone", "com.android.server.telecom", "com.android.providers.telephony",
+        "com.android.providers.contacts", "com.android.providers.media.module", "com.google.android.providers.media.module",
+        "com.android.bluetooth", "com.google.android.bluetooth", "com.android.nfc", "com.android.se",
+        "com.google.android.networkstack", "com.google.android.networkstack.tethering", "com.android.networkstack.tethering",
+        "com.google.android.cellbroadcastreceiver", "com.google.android.cellbroadcastservice", "com.android.cellbroadcastreceiver",
+        "com.android.emergency", "com.google.android.apps.nexuslauncher", "com.android.launcher3",
+        "com.google.android.inputmethod.latin", "com.android.inputdevices", "com.android.keychain",
+        "com.google.android.documentsui", "com.android.documentsui", "com.android.externalstorage",
+        "com.google.android.ext.services", "com.google.android.ext.shared", "com.android.location.fused",
     ];
 
-    public static async Task<TvDevice> LoadAsync(AdbService adb, string serial)
+    public static async Task<PhoneDevice> LoadAsync(AdbService adb, string serial)
     {
         var props = await adb.ShellAsync(serial,
             "getprop ro.product.manufacturer; getprop ro.product.brand; getprop ro.product.model; " +
-            "getprop ro.serialno; getprop ro.build.version.release; getprop ro.build.version.sdk; getprop ro.build.version.name");
+            "getprop ro.serialno; getprop ro.build.version.release; getprop ro.build.version.sdk");
         var p = props.Output.Split('\n');
         string Prop(int i) => i < p.Length ? p[i].Trim() : "";
 
@@ -107,17 +99,16 @@ public sealed class TvDevice
         var imeLine = ime.Output.Trim();
         var imePkg = imeLine.Contains('/') ? imeLine[..imeLine.IndexOf('/')] : "";
 
-        var dream = await adb.ShellAsync(serial, "settings get secure screensaver_components");
-        var setup = await adb.ShellAsync(serial, "settings get secure user_setup_complete");
+        var roles = await adb.ShellAsync(serial,
+            "cmd role get-role-holders android.app.role.DIALER; cmd role get-role-holders android.app.role.SMS");
+        var roleHolders = roles.Output.Split(['\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(l => l.Contains('.') && !l.Contains(' '))
+            .ToHashSet();
 
+        var setup = await adb.ShellAsync(serial, "settings get secure user_setup_complete");
         var storage = await ReadStorageAsync(adb, serial);
 
-        var net = await adb.ShellAsync(serial, "dumpsys connectivity | grep -E 'NetworkAgentInfo.*CONNECTED/CONNECTED'");
-        var network = NetworkKind.Unknown;
-        if (net.Output.Contains("type: Ethernet", StringComparison.OrdinalIgnoreCase)) network = NetworkKind.Ethernet;
-        else if (net.Output.Contains("type: WIFI", StringComparison.OrdinalIgnoreCase)) network = NetworkKind.WiFi;
-
-        return new TvDevice
+        return new PhoneDevice
         {
             Serial = serial,
             Manufacturer = Prop(0),
@@ -126,13 +117,11 @@ public sealed class TvDevice
             SerialNo = Prop(3),
             AndroidVersion = Prop(4),
             Sdk = int.TryParse(Prop(5), out var sdk) ? sdk : 0,
-            FireOsVersion = Prop(6).StartsWith("Fire OS") ? Prop(6) : "",
             RamMb = ramKb / 1024,
-            Network = network,
             HomePackage = homePkg,
             HomeCapable = homeCapable,
             InputMethodPackage = imePkg,
-            ScreensaverComponent = dream.Output.Trim() is var d && d != "null" ? d : "",
+            RoleHolders = roleHolders,
             SetupComplete = setup.Output.Trim() == "1",
             StorageTotalMb = storage.TotalMb,
             StorageFreeMb = storage.FreeMb,

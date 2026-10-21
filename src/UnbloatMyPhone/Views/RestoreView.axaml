@@ -51,7 +51,6 @@
         </StackPanel>
       </Border>
 
-      <v:HomeScreenCard DataContext="{Binding HomeScreen}" IsVisible="{Binding HasPlayStore}" IsEnabled="{Binding !$parent[UserControl].DataContext.IsBusy}" />
 
       <Button Content="{l:T Common_Back}" Command="{Binding BackCommand}" IsEnabled="{Binding !IsBusy}" />
     </StackPanel>

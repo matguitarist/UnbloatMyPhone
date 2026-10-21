@@ -23,25 +23,24 @@ public sealed class Backup
     public string SerialNo { get; set; } = "";
     public string AndroidVersion { get; set; } = "";
     public List<string> DisabledPackages { get; set; } = [];
-    /// <summary>Apps a choice turned back on (e.g. for the screensaver); Restore turns them off again.</summary>
+    /// <summary>Apps a choice turned back on; Restore turns them off again.</summary>
     public List<string> EnabledPackages { get; set; } = [];
     public List<SettingChange> Settings { get; set; } = [];
-    public bool? WifiWasOn { get; set; }
 
     [JsonIgnore] public string FilePath { get; set; } = "";
-    [JsonIgnore] public int ChangeCount => DisabledPackages.Count + EnabledPackages.Count + Settings.Count + (WifiWasOn == true ? 1 : 0);
+    [JsonIgnore] public int ChangeCount => DisabledPackages.Count + EnabledPackages.Count + Settings.Count;
     [JsonIgnore] public string CreatedText => Created.ToString("g", Loc.Culture);
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
-    public static string FolderFor(TvDevice dev)
+    public static string FolderFor(PhoneDevice dev)
     {
         var id = string.IsNullOrWhiteSpace(dev.SerialNo) ? dev.Serial : dev.SerialNo;
         var safe = new string($"{dev.DisplayName}-{id}".Select(c => char.IsLetterOrDigit(c) || c == '-' ? c : '_').ToArray());
         return Path.Combine(AdbService.BackupDir, safe);
     }
 
-    public static Backup Start(TvDevice dev)
+    public static Backup Start(PhoneDevice dev)
     {
         var folder = FolderFor(dev);
         Directory.CreateDirectory(folder);
@@ -61,7 +60,7 @@ public sealed class Backup
         File.WriteAllText(FilePath, JsonSerializer.Serialize(this, Json));
     }
 
-    public static List<Backup> ListFor(TvDevice dev)
+    public static List<Backup> ListFor(PhoneDevice dev)
     {
         var folder = FolderFor(dev);
         if (!Directory.Exists(folder)) return [];

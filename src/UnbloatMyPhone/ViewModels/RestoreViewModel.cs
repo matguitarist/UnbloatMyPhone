@@ -10,7 +10,7 @@ public sealed partial class BackupItem(Backup backup) : ObservableObject
 {
     public Backup Backup { get; } = backup;
     public string When => Backup.CreatedText;
-    public string Summary => Loc.Format("Restore_Summary", Backup.DisabledPackages.Count, Backup.Settings.Count + (Backup.WifiWasOn == true ? 1 : 0));
+    public string Summary => Loc.Format("Restore_Summary", Backup.DisabledPackages.Count, Backup.Settings.Count);
     public void Refresh() => OnPropertyChanged(nameof(Summary));
 }
 
@@ -18,7 +18,7 @@ public sealed partial class RestoreViewModel : PageViewModel
 {
     public override int StepIndex => 2;
 
-    public TvDevice Device { get; private set; }
+    public PhoneDevice Device { get; private set; }
     public ObservableCollection<BackupItem> Backups { get; } = [];
 
     [ObservableProperty] private bool _isBusy;
@@ -26,12 +26,10 @@ public sealed partial class RestoreViewModel : PageViewModel
     [ObservableProperty] private bool _statusIsError;
 
     public bool HasBackups => Backups.Count > 0;
-    public HomeScreenViewModel HomeScreen { get; private set; }
 
-    public RestoreViewModel(MainViewModel main, TvDevice device) : base(main)
+    public RestoreViewModel(MainViewModel main, PhoneDevice device) : base(main)
     {
         Device = device;
-        HomeScreen = new HomeScreenViewModel(main, device);
         Reload();
     }
 
@@ -47,7 +45,6 @@ public sealed partial class RestoreViewModel : PageViewModel
     public override void OnLanguageChanged()
     {
         foreach (var b in Backups) b.Refresh();
-        HomeScreen.RefreshTexts();
     }
 
     /// <summary>Undo one run: re-enable its apps and put every setting back as it was.</summary>
@@ -63,8 +60,6 @@ public sealed partial class RestoreViewModel : PageViewModel
                 await adb.ShellAsync(serial, $"pm enable {pkg}");
             foreach (var s in Enumerable.Reverse(b.Settings))
                 await SettingsIO.RestoreAsync(adb, serial, s.Namespace, s.Key, s.OldValue);
-            if (b.WifiWasOn == true)
-                await adb.ShellAsync(serial, "svc wifi enable");
             foreach (var pkg in b.EnabledPackages)
                 await adb.ShellAsync(serial, $"pm disable-user --user 0 {pkg}");
 
@@ -103,10 +98,8 @@ public sealed partial class RestoreViewModel : PageViewModel
         try
         {
             Status = await work();
-            Device = await TvDevice.LoadAsync(Main.Adb, Device.Serial);
+            Device = await PhoneDevice.LoadAsync(Main.Adb, Device.Serial);
             Main.Device = Device;
-            HomeScreen = new HomeScreenViewModel(Main, Device);
-            OnPropertyChanged(nameof(HomeScreen));
             Reload();
         }
         catch (Exception ex)

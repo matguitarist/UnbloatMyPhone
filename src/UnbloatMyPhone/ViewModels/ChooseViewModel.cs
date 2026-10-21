@@ -15,12 +15,12 @@ public sealed partial class ChooseViewModel : PageViewModel
 {
     public override int StepIndex => 2;
 
-    public TvDevice Device { get; }
+    public PhoneDevice Device { get; }
     public List<TweakGroup> Groups { get; }
 
     [ObservableProperty] private bool _rebootAfter = true;
 
-    /// <summary>Choices from the last run (possibly on another TV), offered at the top.</summary>
+    /// <summary>Choices from the last run (possibly on another phone), offered at the top.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasLastChoices), nameof(LastChoicesText))]
     private ChoiceSet? _lastChoices;
@@ -32,15 +32,10 @@ public sealed partial class ChooseViewModel : PageViewModel
     [NotifyPropertyChangedFor(nameof(HasReturned), nameof(ReturnedText), nameof(ReturnedNames))]
     private ReturnedItems? _returned;
 
-    /// <summary>Fire TV only: Amazon's tracking switches that are on (string keys of their names).</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(FirePrivacyText), nameof(FirePrivacyAllOff))]
-    private List<string>? _firePrivacyOn;
-
     /// <summary>Preinstalled apps the catalog doesn't know, for the report to GitHub.</summary>
     public List<string> UnknownApps { get; }
 
-    public ChooseViewModel(MainViewModel main, TvDevice device) : base(main)
+    public ChooseViewModel(MainViewModel main, PhoneDevice device) : base(main)
     {
         Device = device;
         Groups = Catalog.Build(device);
@@ -48,7 +43,6 @@ public sealed partial class ChooseViewModel : PageViewModel
         LastChoices = ChoiceSet.LoadLast();
         foreach (var t in AllTweaks) t.PropertyChanged += OnTweakChanged;
         _ = CheckReturnedAsync();
-        if (device.IsFireTv) _ = CheckFirePrivacyAsync();
     }
 
     private async Task CheckReturnedAsync()
@@ -82,18 +76,10 @@ public sealed partial class ChooseViewModel : PageViewModel
     public string ApplyText => Loc.Format("Choose_Apply", SelectedCount);
     public bool CanApply => SelectedCount > 0;
 
-    public string AndroidText => Device.FireOsVersion.Length > 0
-        ? Device.FireOsVersion.Split(" (")[0]
-        : Loc.Format("Choose_Android", Device.AndroidVersion);
+    public string AndroidText => Loc.Format("Choose_Android", Device.AndroidVersion);
     public string RamText => Loc.Format("Choose_Ram", (Device.RamMb / 1024.0).ToString("0.#", Loc.Culture));
     public string StorageText => Loc.Format("Choose_Storage", (Device.StorageFreeMb / 1024.0).ToString("0.#", Loc.Culture));
     public bool HasStorage => Device.StorageTotalMb > 0;
-    public string NetworkText => Loc.Get(Device.Network switch
-    {
-        NetworkKind.Ethernet => "Choose_NetEthernet",
-        NetworkKind.WiFi => "Choose_NetWifi",
-        _ => "Choose_NetUnknown",
-    });
     public string AlreadyOffText => Device.Disabled.Count == 1 ? Loc.Get("Choose_AlreadyOffOne") : Loc.Format("Choose_AlreadyOff", Device.Disabled.Count);
     public bool HasAlreadyOff => Device.Disabled.Count > 0;
 
@@ -116,21 +102,12 @@ public sealed partial class ChooseViewModel : PageViewModel
 
     public List<string> ReturnedNames => Returned is null ? [] : MatchingTweaks(Returned).Select(m => "• " + m.Tweak.Title).ToList();
 
-    public bool IsFireTv => Device.IsFireTv;
-    public bool FirePrivacyAllOff => FirePrivacyOn is [];
-    public string FirePrivacyText => FirePrivacyOn switch
-    {
-        null => "",
-        [] => Loc.Get("Fire_PrivacyAllOff"),
-        var on => Loc.Format("Fire_PrivacyOn", string.Join(", ", on.Select(Loc.Get))),
-    };
-
     public bool HasUnknownApps => UnknownApps.Count > 0;
     public string UnknownText => Loc.Format("Choose_UnknownText", UnknownApps.Count);
 
     private void OnTweakChanged(object? sender, PropertyChangedEventArgs e)
     {
-        // A chosen option that needs an app (e.g. Google Ambient) unticks turning that app off.
+        // A chosen option that needs an app unticks turning that app off.
         if (sender is Tweak { KeptPackages.Count: > 0 } t && e.PropertyName is nameof(Tweak.IsSelected) or nameof(Tweak.SelectedOption))
             foreach (var other in AllTweaks.OfType<PackageTweak>().Where(p => t.KeptPackages.Contains(p.Package)))
                 other.IsSelected = false;
@@ -148,8 +125,7 @@ public sealed partial class ChooseViewModel : PageViewModel
         foreach (var name in new[]
                  {
                      nameof(SelectedText), nameof(ApplyText), nameof(AndroidText), nameof(RamText), nameof(StorageText),
-                     nameof(NetworkText), nameof(AlreadyOffText), nameof(LastChoicesText), nameof(UnknownText), nameof(ReturnedText), nameof(ReturnedNames),
-                     nameof(FirePrivacyText),
+                     nameof(AlreadyOffText), nameof(LastChoicesText), nameof(UnknownText), nameof(ReturnedText), nameof(ReturnedNames),
                  })
             OnPropertyChanged(name);
     }
@@ -200,16 +176,6 @@ public sealed partial class ChooseViewModel : PageViewModel
 
     [RelayCommand]
     private void DismissReturned() => Returned = null;
-
-    [RelayCommand]
-    private async Task CheckFirePrivacyAsync()
-    {
-        try { FirePrivacyOn = await FirePrivacy.ReadOnAsync(Main.Adb, Device.Serial); }
-        catch { /* only advice */ }
-    }
-
-    [RelayCommand]
-    private Task OpenFirePrivacyAsync() => FirePrivacy.OpenOnTvAsync(Main.Adb, Device.Serial);
 
     private void UseChoices(ChoiceSet set)
     {
@@ -283,5 +249,5 @@ public sealed partial class ChooseViewModel : PageViewModel
     private void Apply() => Main.GoApply(AllTweaks.Where(t => t.IsSelected).ToList(), RebootAfter);
 
     [RelayCommand]
-    private void ChangeTv() => Main.GoConnect();
+    private void ChangePhone() => Main.GoConnect();
 }

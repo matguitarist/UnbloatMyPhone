@@ -18,7 +18,6 @@
     <DataTemplate DataType="vm:RestoreViewModel"><v:RestoreView /></DataTemplate>
     <DataTemplate DataType="vm:HealthViewModel"><v:HealthView /></DataTemplate>
     <DataTemplate DataType="vm:InstallViewModel"><v:InstallView /></DataTemplate>
-    <DataTemplate DataType="vm:RemoteViewModel"><v:RemoteView /></DataTemplate>
   </Window.DataTemplates>
 
   <Window.Styles>
@@ -93,11 +92,11 @@
             <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource SystemAccentColor}">
               <Path Stroke="White" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round"
                     Width="22" Height="22" Stretch="Uniform"
-                    Data="M3 5 H21 V16 H3 Z M8 20 H16 M12 16 V20 M9 9.5 L11 11.5 L15 7.5" />
+                    Data="M8 2 H16 A2 2 0 0 1 18 4 V20 A2 2 0 0 1 16 22 H8 A2 2 0 0 1 6 20 V4 A2 2 0 0 1 8 2 Z M9.5 11 L11.5 13 L15 9.5" />
             </Border>
             <StackPanel VerticalAlignment="Center">
               <TextBlock Text="UnbloatMyPhone" FontWeight="SemiBold" FontSize="15" />
-              <TextBlock Text="Android TV · Google TV · Fire TV" Classes="faint" FontSize="11" />
+              <TextBlock Text="Android phones · Google Pixel" Classes="faint" FontSize="11" />
             </StackPanel>
           </StackPanel>
 
@@ -142,12 +141,6 @@
               <StackPanel Orientation="Horizontal" Spacing="9">
                 <Path Data="M3 12 H7 L10 5 L14 19 L17 12 H21" />
                 <TextBlock Text="{l:T Side_Health}" />
-              </StackPanel>
-            </Button>
-            <Button Classes="link tool" Classes.current="{Binding OnRemote}" Command="{Binding GoRemoteCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="9">
-                <Path Data="M3 5 H21 V16 H3 Z M8 20 H16 M12 16 V20" />
-                <TextBlock Text="{l:T Side_Remote}" />
               </StackPanel>
             </Button>
             <Button Classes="link tool" Classes.current="{Binding OnInstall}" Command="{Binding GoInstallCommand}">

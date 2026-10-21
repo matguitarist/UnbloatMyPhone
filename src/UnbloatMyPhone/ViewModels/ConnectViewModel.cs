@@ -10,39 +10,27 @@ namespace UnbloatMyPhone.ViewModels;
 
 public enum ConnectState { Idle, Connecting, WaitingForApproval, Reading, Failed }
 
-public sealed partial class FoundTv(string address) : ObservableObject
+/// <summary>A phone adb can see: plugged in, connected over Wi-Fi, or announcing wireless debugging.</summary>
+public sealed class FoundPhone(string serial, string state, string name, bool wireless)
 {
-    public string Address { get; } = address;
-    [ObservableProperty] private string _name = "";
-    public bool HasName => Name.Length > 0;
-    partial void OnNameChanged(string value) => OnPropertyChanged(nameof(HasName));
+    public string Serial { get; } = serial;
+    /// <summary>"device", "unauthorized", "offline", or "announced" (wireless debugging is on, not connected yet).</summary>
+    public string State { get; } = state;
+    public string Name { get; } = name;
+    public bool IsWireless { get; } = wireless;
+    public bool CanUse => State is "device" or "announced";
+    public bool NeedsApproval => State == "unauthorized";
+    public string Detail => Loc.Get(NeedsApproval ? "Connect_RowApprove" : State == "offline" ? "Connect_RowOffline"
+        : IsWireless ? "Connect_RowWifi" : "Connect_RowUsb");
+    public string Key => $"{Serial}|{State}|{Name}";
 }
 
 public sealed partial class ConnectViewModel : PageViewModel
 {
     public override int StepIndex => 1;
 
-    public ObservableCollection<FoundTv> Found { get; } = [];
-    public List<FoundTv> Recent { get; }
-    public bool HasRecent => Recent.Count > 0;
-
-    private readonly Dictionary<string, string> _recentNames;
-
-    public ConnectViewModel(MainViewModel main) : base(main)
-    {
-        var recent = RecentTvs.Load();
-        Recent = recent.Select(r => new FoundTv(DisplayAddress(r.Address)) { Name = r.Name }).ToList();
-        _recentNames = recent.GroupBy(r => r.Address).ToDictionary(g => g.Key, g => g.First().Name);
-    }
-
-    /// <summary>"192.168.1.20:5555" → "192.168.1.20"; other ports are kept.</summary>
-    private static string DisplayAddress(string serial) =>
-        serial.EndsWith(":" + NetworkScanner.AdbPort) ? serial[..serial.LastIndexOf(':')] : serial;
-
-    [ObservableProperty] private string _address = "";
-    [ObservableProperty] private bool _isScanning;
-    [ObservableProperty] private bool _scanDone;
-    [ObservableProperty] private double _scanProgress;
+    public ObservableCollection<FoundPhone> Phones { get; } = [];
+    public bool NoPhone => Phones.Count == 0;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy), nameof(IsWaiting), nameof(HasError), nameof(StatusText), nameof(ShowStatus))]
@@ -52,17 +40,23 @@ public sealed partial class ConnectViewModel : PageViewModel
     [NotifyPropertyChangedFor(nameof(StatusText))]
     private string _errorDetail = "";
 
+    /// <summary>Filled in by itself while the phone shows "Pair device with pairing code".</summary>
     [ObservableProperty] private string _pairAddress = "";
     [ObservableProperty] private string _pairCode = "";
     [ObservableProperty] private string _pairResult = "";
+    [ObservableProperty] private bool _pairingSeen;
+    [ObservableProperty] private bool _isPairing;
+    [ObservableProperty] private string _manualAddress = "";
 
+    private string _autoPairAddress = "";
+    private string _pairingName = "";
     private CancellationTokenSource? _cts;
+    private readonly CancellationTokenSource _watch = new();
 
     public bool IsBusy => State is ConnectState.Connecting or ConnectState.WaitingForApproval or ConnectState.Reading;
     public bool IsWaiting => State == ConnectState.WaitingForApproval;
     public bool HasError => State == ConnectState.Failed;
-    public bool ShowStatus => State != ConnectState.Idle && State != ConnectState.WaitingForApproval;
-    public bool NothingFound => ScanDone && Found.Count == 0;
+    public bool ShowStatus => State is ConnectState.Connecting or ConnectState.Reading or ConnectState.Failed;
 
     public string StatusText => State switch
     {
@@ -72,50 +66,74 @@ public sealed partial class ConnectViewModel : PageViewModel
         _ => "",
     };
 
-    public override void OnLanguageChanged() => OnPropertyChanged(nameof(StatusText));
+    public ConnectViewModel(MainViewModel main) : base(main) => _ = WatchAsync(_watch.Token);
 
-    [RelayCommand]
-    private async Task ScanAsync()
+    public override void OnLeave()
     {
-        IsScanning = true;
-        ScanDone = false;
-        Found.Clear();
-        OnPropertyChanged(nameof(NothingFound));
-        try
+        _watch.Cancel();
+        _cts?.Cancel();
+    }
+
+    public override void OnLanguageChanged()
+    {
+        OnPropertyChanged(nameof(StatusText));
+        var rows = Phones.ToList();
+        Phones.Clear();
+        foreach (var r in rows) Phones.Add(r);
+    }
+
+    /// <summary>Every two seconds: phones plugged in or on Wi-Fi, and an open pairing screen.</summary>
+    private async Task WatchAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
         {
-            var ips = await NetworkScanner.ScanAsync(new Progress<double>(p => ScanProgress = p * 100));
-            foreach (var ip in ips)
-            {
-                var tv = new FoundTv(ip);
-                Found.Add(tv);
-                if (_recentNames.TryGetValue($"{ip}:{NetworkScanner.AdbPort}", out var known)) tv.Name = known;
-                else _ = ResolveNameAsync(tv);
-            }
-        }
-        finally
-        {
-            IsScanning = false;
-            ScanDone = true;
-            OnPropertyChanged(nameof(NothingFound));
+            try { await RefreshAsync(); } catch { /* adb busy or restarting: try again */ }
+            try { await Task.Delay(2000, ct); } catch (OperationCanceledException) { return; }
         }
     }
 
-    private static async Task ResolveNameAsync(FoundTv tv)
+    private async Task RefreshAsync()
     {
-        try
+        var devices = await Main.Adb.ListDevicesAsync();
+        var services = await Main.Adb.MdnsServicesAsync();
+
+        var rows = devices
+            .Select(d => new FoundPhone(d.Serial, d.State, d.Model.Length > 0 ? d.Model : d.Serial, AdbService.IsWirelessSerial(d.Serial)))
+            .ToList();
+        // Paired phones with wireless debugging on that adb hasn't connected to yet.
+        foreach (var s in services.Where(s => !s.Pairing))
+            if (!devices.Any(d => d.Serial == s.Address || d.Serial.StartsWith(s.Name + ".")))
+                rows.Add(new FoundPhone(s.Address, "announced", Loc.Get("Connect_WifiPhone"), wireless: true));
+
+        if (!rows.Select(r => r.Key).SequenceEqual(Phones.Select(p => p.Key)))
         {
-            var lookup = Dns.GetHostEntryAsync(tv.Address);
-            if (await Task.WhenAny(lookup, Task.Delay(2000)) == lookup && lookup.Result.HostName != tv.Address)
-                tv.Name = lookup.Result.HostName;
+            Phones.Clear();
+            foreach (var r in rows) Phones.Add(r);
+            OnPropertyChanged(nameof(NoPhone));
         }
-        catch { /* no name, the address is enough */ }
+
+        var pairing = services.FirstOrDefault(s => s.Pairing);
+        PairingSeen = pairing is not null;
+        if (pairing is not null)
+        {
+            _pairingName = pairing.Name;
+            if (PairAddress.Length == 0 || PairAddress == _autoPairAddress) PairAddress = _autoPairAddress = pairing.Address;
+        }
     }
 
     [RelayCommand]
-    private Task ConnectFoundAsync(FoundTv tv) => ConnectToAsync(tv.Address);
+    private Task UseAsync(FoundPhone phone) => ConnectToAsync(phone.Serial, connectFirst: phone.State == "announced");
 
     [RelayCommand]
-    private Task ConnectManualAsync() => ConnectToAsync(Address);
+    private Task ConnectManualAsync()
+    {
+        if (Normalize(ManualAddress) is not { } target)
+        {
+            Fail(Loc.Get("Connect_BadAddress"));
+            return Task.CompletedTask;
+        }
+        return ConnectToAsync(target, connectFirst: true);
+    }
 
     [RelayCommand]
     private void Cancel()
@@ -124,70 +142,88 @@ public sealed partial class ConnectViewModel : PageViewModel
         State = ConnectState.Idle;
     }
 
-    private async Task ConnectToAsync(string input)
+    private async Task ConnectToAsync(string serial, bool connectFirst)
     {
-        var target = Normalize(input);
-        if (target is null)
-        {
-            Fail(Loc.Get("Connect_BadAddress"));
-            return;
-        }
-
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         var ct = _cts.Token;
         State = ConnectState.Connecting;
         try
         {
-            var r = await Main.Adb.RunAsync(["connect", target], 20000, ct);
-            // "failed to authenticate" means the TV is showing "Allow USB debugging?": wait for it below.
-            if (!r.All.Contains("connected to") && !r.All.Contains("failed to authenticate"))
+            if (connectFirst)
             {
-                Fail(Loc.Format("Connect_Refused", target) + "\n" + r.All);
-                return;
+                var r = await Main.Adb.RunAsync(["connect", serial], 20000, ct);
+                if (!r.All.Contains("connected to"))
+                {
+                    Fail(Loc.Format("Connect_Refused", serial) + "\n" + r.All);
+                    return;
+                }
             }
 
-            // Wait for "Allow USB debugging?" to be accepted on the TV (up to 3 minutes).
+            // Wait for "Allow USB debugging?" to be accepted on the phone (up to 3 minutes).
             var deadline = DateTime.UtcNow.AddMinutes(3);
             while (DateTime.UtcNow < deadline)
             {
                 ct.ThrowIfCancellationRequested();
-                var state = await Main.Adb.GetStateAsync(target);
+                var state = await Main.Adb.GetStateAsync(serial);
                 if (state == "device") break;
                 if (state == "unauthorized") State = ConnectState.WaitingForApproval;
-                if (state is null or "offline")
-                    await Main.Adb.RunAsync(["connect", target], 15000, ct);
                 await Task.Delay(1500, ct);
             }
-            if (await Main.Adb.GetStateAsync(target) != "device")
+            if (await Main.Adb.GetStateAsync(serial) != "device")
             {
                 Fail(Loc.Get("Connect_ApprovalTimeout"));
                 return;
             }
 
             State = ConnectState.Reading;
-            var device = await TvDevice.LoadAsync(Main.Adb, target);
-            RecentTvs.Remember(target, device.DisplayName);
-            Main.Device = device;
+            Main.Device = await PhoneDevice.LoadAsync(Main.Adb, serial);
             await Main.GoChooseAsync();
         }
         catch (OperationCanceledException) { State = ConnectState.Idle; }
         catch (Exception ex) { Fail(ex.Message); }
     }
 
+    /// <summary>Pair with the code the phone shows, then connect to it straight away.</summary>
     [RelayCommand]
     private async Task PairAsync()
     {
         PairResult = "";
-        if (Normalize(PairAddress, requirePort: true) is not { } target || PairCode.Trim().Length < 6)
+        var code = new string(PairCode.Where(char.IsDigit).ToArray());
+        if (Normalize(PairAddress) is not { } target || code.Length != 6)
         {
             PairResult = Loc.Get("Connect_PairBadInput");
             return;
         }
-        var r = await Main.Adb.RunAsync(["pair", target, PairCode.Trim()], 30000);
-        PairResult = r.All.Contains("Successfully paired")
-            ? Loc.Get("Connect_PairOk")
-            : Loc.Get("Connect_PairFailed") + "\n" + r.All;
+        IsPairing = true;
+        try
+        {
+            var r = await Main.Adb.RunAsync(["pair", target, code], 30000);
+            if (!r.All.Contains("Successfully paired"))
+            {
+                PairResult = Loc.Get("Connect_PairFailed") + "\n" + r.All;
+                return;
+            }
+            PairResult = Loc.Get("Connect_PairOk");
+            PairCode = "";
+
+            // The phone now announces its debugging port under the same name; adb usually connects by itself.
+            var name = target == _autoPairAddress ? _pairingName : "";
+            var host = target[..target.LastIndexOf(':')];
+            for (var i = 0; i < 15; i++)
+            {
+                var devices = await Main.Adb.ListDevicesAsync();
+                var ready = devices.FirstOrDefault(d => d.State == "device" &&
+                    ((name.Length > 0 && d.Serial.StartsWith(name + ".")) || d.Serial.StartsWith(host + ":")));
+                if (ready is not null) { await ConnectToAsync(ready.Serial, connectFirst: false); return; }
+                var svc = (await Main.Adb.MdnsServicesAsync()).FirstOrDefault(s => !s.Pairing &&
+                    ((name.Length > 0 && s.Name == name) || s.Address.StartsWith(host + ":")));
+                if (svc is not null) { await ConnectToAsync(svc.Address, connectFirst: true); return; }
+                await Task.Delay(1000);
+            }
+            PairResult = Loc.Get("Connect_PairOkNoPort");
+        }
+        finally { IsPairing = false; }
     }
 
     private void Fail(string message)
@@ -196,21 +232,14 @@ public sealed partial class ConnectViewModel : PageViewModel
         State = ConnectState.Failed;
     }
 
-    /// <summary>"192.168.1.20" → "192.168.1.20:5555". Accepts a comma typed instead of a dot.</summary>
-    public static string? Normalize(string input, bool requirePort = false)
+    /// <summary>"192.168.1.20:41234". Wireless debugging always uses its own port, so it is required.
+    /// Accepts a comma typed instead of a dot.</summary>
+    public static string? Normalize(string input)
     {
         var s = input.Trim().Replace(',', '.').Replace(" ", "");
-        if (s.Length == 0) return null;
-        var host = s;
-        var port = NetworkScanner.AdbPort;
         var colon = s.LastIndexOf(':');
-        if (colon > 0)
-        {
-            host = s[..colon];
-            if (!int.TryParse(s[(colon + 1)..], out port) || port is < 1 or > 65535) return null;
-        }
-        else if (requirePort) return null;
-        return IPAddress.TryParse(host, out var ip) && ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
+        if (colon <= 0 || !int.TryParse(s[(colon + 1)..], out var port) || port is < 1 or > 65535) return null;
+        return IPAddress.TryParse(s[..colon], out var ip) && ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
             ? $"{ip}:{port}"
             : null;
     }

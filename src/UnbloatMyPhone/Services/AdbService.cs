@@ -9,6 +9,12 @@ public sealed record AdbResult(int ExitCode, string Output, string Error)
     public string All => (Output + "\n" + Error).Trim();
 }
 
+/// <summary>One line of "adb devices -l". State is device, unauthorized or offline.</summary>
+public sealed record AdbDevice(string Serial, string State, string Model);
+
+/// <summary>A phone announcing wireless debugging: its pairing dialog, or its debugging port once paired.</summary>
+public sealed record MdnsService(string Name, string Address, bool Pairing);
+
 /// <summary>
 /// Owns a private copy of Google's platform-tools (downloaded on first run) and runs adb.
 /// </summary>
@@ -118,36 +124,6 @@ public sealed class AdbService
         return new AdbResult(p.ExitCode, (await stdout).Replace("\r", ""), (await stderr).Replace("\r", ""));
     }
 
-    /// <summary>Raw bytes from stdout, e.g. "exec-out screencap -p". Null on failure or timeout.</summary>
-    public async Task<byte[]?> RunBinaryAsync(IEnumerable<string> args, int timeoutMs = 10000)
-    {
-        await StartServerAsync();
-        var psi = new ProcessStartInfo(AdbPath)
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-        foreach (var a in args) psi.ArgumentList.Add(a);
-        using var p = Process.Start(psi)!;
-        using var cts = new CancellationTokenSource(timeoutMs);
-        try
-        {
-            using var ms = new MemoryStream();
-            var stderr = p.StandardError.ReadToEndAsync(cts.Token);
-            await p.StandardOutput.BaseStream.CopyToAsync(ms, cts.Token);
-            await p.WaitForExitAsync(cts.Token);
-            await stderr;
-            return p.ExitCode == 0 && ms.Length > 0 ? ms.ToArray() : null;
-        }
-        catch (OperationCanceledException)
-        {
-            try { p.Kill(true); } catch { }
-            return null;
-        }
-    }
-
     public Task<AdbResult> ShellAsync(string serial, string command, int timeoutMs = 20000) =>
         RunAsync(["-s", serial, "shell", command], timeoutMs);
 
@@ -159,6 +135,59 @@ public sealed class AdbService
         {
             var parts = line.Split(['\t', ' '], StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2 && parts[0] == serial) return parts[1];
+        }
+        return null;
+    }
+
+    /// <summary>"192.168.1.20:41234", or "adb-SERIAL-xyz._adb-tls-connect._tcp" when adb found the phone on its own.</summary>
+    public static bool IsWirelessSerial(string serial) => serial.Contains(':') || serial.Contains("._adb-tls-connect.");
+
+    /// <summary>Every phone adb sees, from "adb devices -l".</summary>
+    public async Task<List<AdbDevice>> ListDevicesAsync()
+    {
+        var r = await RunAsync(["devices", "-l"], 10000);
+        var list = new List<AdbDevice>();
+        foreach (var line in r.Output.Split('\n').Skip(1))
+        {
+            var parts = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2) continue;
+            var model = parts.FirstOrDefault(x => x.StartsWith("model:"))?["model:".Length..].Replace('_', ' ') ?? "";
+            list.Add(new AdbDevice(parts[0], parts[1], model));
+        }
+        return list;
+    }
+
+    /// <summary>What wireless debugging announces on the network ("adb mdns services").</summary>
+    public async Task<List<MdnsService>> MdnsServicesAsync()
+    {
+        var r = await RunAsync(["mdns", "services"], 10000);
+        var list = new List<MdnsService>();
+        foreach (var line in r.Output.Split('\n'))
+        {
+            // adb-SERIAL-xyz	_adb-tls-pairing._tcp	192.168.1.20:37099
+            var parts = line.Split(['\t', ' '], StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 3 || !parts[2].Contains(':')) continue;
+            if (parts[1].StartsWith("_adb-tls-pairing")) list.Add(new MdnsService(parts[0], parts[2], Pairing: true));
+            else if (parts[1].StartsWith("_adb-tls-connect")) list.Add(new MdnsService(parts[0], parts[2], Pairing: false));
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// The serial a phone answers on now. Over Wi-Fi the port changes when the phone restarts,
+    /// so look for it again by its hardware serial number and reconnect.
+    /// </summary>
+    public async Task<string?> FindAgainAsync(string serial, string serialNo)
+    {
+        var devices = await ListDevicesAsync();
+        if (devices.Any(d => d.Serial == serial && d.State == "device")) return serial;
+        if (serialNo.Length == 0) return null;
+        if (devices.FirstOrDefault(d => d.State == "device" && (d.Serial == serialNo || d.Serial.StartsWith($"adb-{serialNo}-"))) is { } same)
+            return same.Serial;
+        if ((await MdnsServicesAsync()).FirstOrDefault(s => !s.Pairing && s.Name.StartsWith($"adb-{serialNo}-")) is { } svc)
+        {
+            await RunAsync(["connect", svc.Address], 10000);
+            if (await GetStateAsync(svc.Address) == "device") return svc.Address;
         }
         return null;
     }

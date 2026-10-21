@@ -111,7 +111,6 @@
         </Expander>
 
         <!-- Optional: a home screen without ads -->
-        <v:HomeScreenCard DataContext="{Binding HomeScreen}" IsVisible="{Binding $parent[UserControl].DataContext.ShowHomeScreen}" />
 
         <Border Classes="card">
           <StackPanel Spacing="10">

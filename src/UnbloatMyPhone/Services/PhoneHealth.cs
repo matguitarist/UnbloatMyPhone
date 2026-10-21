@@ -7,7 +7,7 @@ namespace UnbloatMyPhone.Services;
 public sealed record ProcessUse(string Name, long Mb);
 public sealed record CrashLoop(string Package, int Restarts);
 
-/// <summary>A read-only snapshot of how the TV is doing.</summary>
+/// <summary>A read-only snapshot of how the phone is doing.</summary>
 public sealed class HealthReport
 {
     public long MemTotalMb { get; init; }
@@ -21,7 +21,7 @@ public sealed class HealthReport
     public List<CrashLoop> Crashing { get; init; } = [];
 }
 
-public static partial class TvHealth
+public static partial class PhoneHealth
 {
     /// <summary>Restarts in the current log above which an app counts as crash-looping.</summary>
     private const int CrashThreshold = 3;
@@ -36,7 +36,7 @@ public static partial class TvHealth
         var cpus = Regex.Match(basics.Output, @"cpus (\d+)-(\d+)");
         var up = Regex.Match(basics.Output, @"up ([\d.]+)");
 
-        var storage = await TvDevice.ReadStorageAsync(adb, serial);
+        var storage = await PhoneDevice.ReadStorageAsync(adb, serial);
 
         // "193,472K: com.example.app (pid 4813 / activities)"
         var mem = await adb.ShellAsync(serial, "dumpsys meminfo | sed -n '/Total PSS by process/,/^$/p' | head -12", 30000);

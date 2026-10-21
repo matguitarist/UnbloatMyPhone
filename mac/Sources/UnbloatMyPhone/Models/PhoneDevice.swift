@@ -1,9 +1,7 @@
 import Foundation
 
-enum NetworkKind: Sendable { case unknown, ethernet, wifi }
-
-/// What we know about the connected TV. Read-only queries only.
-struct TvDevice: Sendable {
+/// What we know about the connected phone. Read-only queries only.
+struct PhoneDevice: Sendable {
     var serial: String
     var manufacturer = ""
     var brand = ""
@@ -11,15 +9,13 @@ struct TvDevice: Sendable {
     var serialNo = ""
     var androidVersion = ""
     var sdk = 0
-    /// "Fire OS 7.6.8.8 (PS7688/4591)" on Fire TV, empty elsewhere.
-    var fireOsVersion = ""
     var ramMb: Int64 = 0
-    var network: NetworkKind = .unknown
     var homePackage = ""
     /// Every app that can act as the home screen, not just the current one.
     var homeCapable: Set<String> = []
     var inputMethodPackage = ""
-    var screensaverComponent = ""
+    /// The default Phone and SMS apps: turning them off would leave the phone unable to call or text.
+    var roleHolders: Set<String> = []
     var setupComplete = false
     var storageTotalMb: Int64 = 0
     var storageFreeMb: Int64 = 0
@@ -27,60 +23,56 @@ struct TvDevice: Sendable {
     var disabled: Set<String> = []
     var thirdParty: Set<String> = []
 
-    /// Amazon Fire TV: Fire OS refuses to switch off Amazon's own apps.
-    var isFireTv: Bool { manufacturer.caseInsensitiveCompare("Amazon") == .orderedSame }
-
     func isInstalled(_ pkg: String) -> Bool { enabled.contains(pkg) || disabled.contains(pkg) }
 
     var displayName: String {
-        if isFireTv { return Self.fireModels[model] ?? "Fire TV \(model)" }
-        let maker = brand.trimmingCharacters(in: .whitespaces).isEmpty ? manufacturer : brand
+        var maker = manufacturer.trimmingCharacters(in: .whitespaces).isEmpty ? brand : manufacturer
+        if let first = maker.first { maker = first.uppercased() + maker.dropFirst() }
         return maker.isEmpty || model.lowercased().hasPrefix(maker.lowercased()) ? model : "\(maker) \(model)"
     }
 
-    /// Fire TV model codes are not shown anywhere on the device.
-    static let fireModels = [
-        "AFTKA": "Fire TV Stick 4K Max", "AFTKRT": "Fire TV Stick 4K Max (2nd gen)",
-        "AFTMM": "Fire TV Stick 4K", "AFTKM": "Fire TV Stick 4K (2nd gen)",
-        "AFTSSS": "Fire TV Stick (3rd gen)", "AFTSS": "Fire TV Stick Lite",
-        "AFTR": "Fire TV Cube (2nd gen)", "AFTGAZL": "Fire TV Cube (3rd gen)",
-    ]
+    /// Connected over Wi-Fi ("192.168.1.20:41234", or the name wireless debugging announces).
+    var isWireless: Bool { Adb.isWireless(serial) }
 
-    var ipAddress: String {
-        guard let i = serial.lastIndex(of: ":") else { return serial }
+    /// Shown under the phone's name: its address on Wi-Fi, "USB" otherwise.
+    var connectionText: String {
+        guard isWireless else { return "USB" }
+        guard let i = serial.lastIndex(of: ":") else { return "Wi-Fi" }
         return String(serial[..<i])
     }
 
     /// Packages that must never be disabled, whatever the catalog says.
     func isProtected(_ pkg: String) -> Bool {
-        pkg == homePackage || homeCapable.contains(pkg) || pkg == inputMethodPackage || Self.protectedPackages.contains(pkg)
-            || (isFireTv && Self.fireProtectedPrefixes.contains { pkg.hasPrefix($0) })
+        pkg == homePackage || homeCapable.contains(pkg) || pkg == inputMethodPackage || roleHolders.contains(pkg)
+            || Self.protectedPackages.contains(pkg)
     }
 
-    /// Fire OS answers "Cannot disable a protected package" for Amazon's apps.
-    static let fireProtectedPrefixes = ["com.amazon.", "amazon.", "android.amazon.", "com.fireos.", "com.ivona."]
-
     static let protectedPackages: Set<String> = [
-        "android", "com.android.systemui", "com.android.settings", "com.android.tv.settings",
-        "com.android.providers.settings", "com.android.providers.tv", "com.android.bluetooth",
+        "android", "com.android.systemui", "com.android.settings", "com.android.providers.settings",
         "com.android.shell", "com.android.packageinstaller", "com.google.android.packageinstaller",
         "com.google.android.gms", "com.google.android.gsf", "com.android.vending",
-        "com.google.android.webview", "com.android.webview", "com.google.android.tvlauncher",
-        "com.google.android.apps.tv.launcherx", "com.google.android.leanbacklauncher",
-        "com.android.tv", "com.google.android.permissioncontroller", "com.android.permissioncontroller",
-        "com.google.android.inputmethod.latin", "com.android.inputdevices",
+        "com.google.android.webview", "com.android.webview", "com.google.android.trichromelibrary",
+        "com.google.android.permissioncontroller", "com.android.permissioncontroller",
+        "com.android.phone", "com.android.server.telecom", "com.android.providers.telephony",
+        "com.android.providers.contacts", "com.android.providers.media.module", "com.google.android.providers.media.module",
+        "com.android.bluetooth", "com.google.android.bluetooth", "com.android.nfc", "com.android.se",
+        "com.google.android.networkstack", "com.google.android.networkstack.tethering", "com.android.networkstack.tethering",
+        "com.google.android.cellbroadcastreceiver", "com.google.android.cellbroadcastservice", "com.android.cellbroadcastreceiver",
+        "com.android.emergency", "com.google.android.apps.nexuslauncher", "com.android.launcher3",
+        "com.google.android.inputmethod.latin", "com.android.inputdevices", "com.android.keychain",
+        "com.google.android.documentsui", "com.android.documentsui", "com.android.externalstorage",
+        "com.google.android.ext.services", "com.google.android.ext.shared", "com.android.location.fused",
     ]
 
-    static func load(_ adb: Adb, serial: String) async -> TvDevice {
-        var d = TvDevice(serial: serial)
+    static func load(_ adb: Adb, serial: String) async -> PhoneDevice {
+        var d = PhoneDevice(serial: serial)
         let props = await adb.shell(serial,
             "getprop ro.product.manufacturer; getprop ro.product.brand; getprop ro.product.model; " +
-            "getprop ro.serialno; getprop ro.build.version.release; getprop ro.build.version.sdk; getprop ro.build.version.name")
+            "getprop ro.serialno; getprop ro.build.version.release; getprop ro.build.version.sdk")
         let p = props.output.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
         func prop(_ i: Int) -> String { i < p.count ? p[i] : "" }
         d.manufacturer = prop(0); d.brand = prop(1); d.model = prop(2)
         d.serialNo = prop(3); d.androidVersion = prop(4); d.sdk = Int(prop(5)) ?? 0
-        d.fireOsVersion = prop(6).hasPrefix("Fire OS") ? prop(6) : ""
 
         let mem = await adb.shell(serial, "grep MemTotal /proc/meminfo")
         d.ramMb = (Int64(mem.output.filter(\.isNumber)) ?? 0) / 1024
@@ -97,18 +89,18 @@ struct TvDevice: Sendable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         d.inputMethodPackage = ime.contains("/") ? String(ime.split(separator: "/")[0]) : ""
 
-        let dream = await adb.shell(serial, "settings get secure screensaver_components").output
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        d.screensaverComponent = dream == "null" ? "" : dream
+        let roles = await adb.shell(serial,
+            "cmd role get-role-holders android.app.role.DIALER; cmd role get-role-holders android.app.role.SMS").output
+        d.roleHolders = Set(roles.split(whereSeparator: { $0 == "\n" || $0 == ";" })
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { $0.contains(".") && !$0.contains(" ") })
+
         d.setupComplete = await adb.shell(serial, "settings get secure user_setup_complete").output
             .trimmingCharacters(in: .whitespacesAndNewlines) == "1"
 
         let storage = await readStorage(adb, serial: serial)
         d.storageTotalMb = storage.totalMb
         d.storageFreeMb = storage.freeMb
-
-        let net = await adb.shell(serial, "dumpsys connectivity | grep -E 'NetworkAgentInfo.*CONNECTED/CONNECTED'").output.lowercased()
-        d.network = net.contains("type: ethernet") ? .ethernet : net.contains("type: wifi") ? .wifi : .unknown
 
         d.enabled = await listPackages(adb, serial: serial, flag: "-e")
         d.disabled = await listPackages(adb, serial: serial, flag: "-d")

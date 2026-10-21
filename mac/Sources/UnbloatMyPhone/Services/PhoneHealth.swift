@@ -11,7 +11,7 @@ struct CrashLoop {
     var restarts: Int
 }
 
-/// A read-only snapshot of how the TV is doing. Same readings as the Windows app.
+/// A read-only snapshot of how the phone is doing. Same readings as the Windows app.
 struct HealthReport {
     var memTotalMb: Int64 = 0
     var memAvailableMb: Int64 = 0
@@ -43,7 +43,7 @@ struct HealthReport {
         if cpus.count == 2, let a = Int(cpus[0]), let b = Int(cpus[1]) { h.cores = b - a + 1 }
         h.uptimeHours = (Double(first(#"up ([\d.]+)"#).first ?? "") ?? 0) / 3600
 
-        let storage = await TvDevice.readStorage(adb, serial: serial)
+        let storage = await PhoneDevice.readStorage(adb, serial: serial)
         h.storageTotalMb = storage.totalMb
         h.storageFreeMb = storage.freeMb
 
@@ -76,8 +76,8 @@ struct ReturnedItems {
     var settings: [SettingChange]
     var count: Int { packages.count + settings.count }
 
-    /// Compare the TV with the backups of runs that weren't undone. Read-only.
-    static func find(_ adb: Adb, device dev: TvDevice) async -> ReturnedItems? {
+    /// Compare the phone with the backups of runs that weren't undone. Read-only.
+    static func find(_ adb: Adb, device dev: PhoneDevice) async -> ReturnedItems? {
         let runs = Backup.list(for: dev) // newest first, undone runs excluded
         guard let newest = runs.first else { return nil }
 
@@ -94,10 +94,6 @@ struct ReturnedItems {
                 wanted["\(s.namespace)|\(s.key)"] = s
                 order.append("\(s.namespace)|\(s.key)")
             }
-        }
-        if runs.contains(where: { $0.wifiWasOn == true }), wanted["global|wifi_on"] == nil {
-            wanted["global|wifi_on"] = SettingChange(namespace: "global", key: "wifi_on", oldValue: nil, newValue: "0")
-            order.append("global|wifi_on")
         }
 
         var settings: [SettingChange] = []
@@ -118,9 +114,7 @@ struct ReturnedItems {
             }
             for (i, s) in list.enumerated() {
                 let now = values[i] ?? ""
-                // wifi_on: anything but "0" means the radio is back on.
-                let changedBack = s.key == "wifi_on" ? now != "0" : now != s.newValue
-                if changedBack && !now.isEmpty { settings.append(s) }
+                if now != s.newValue && !now.isEmpty { settings.append(s) }
             }
         }
         let r = ReturnedItems(since: newest.created, packages: packages, settings: settings)

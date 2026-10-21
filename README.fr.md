@@ -3,153 +3,102 @@
 <h1 align="center">UnbloatMyPhone</h1>
 
 <p align="center">
-  Désactivez les publicités, le pistage et les applications préinstallées de n'importe quel Android TV, Google TV ou Fire TV.<br>
-  Pour Windows, macOS et Linux. Des choix expliqués simplement, une sauvegarde de tout, une annulation en un clic.
+  Désactivez les applications préinstallées, le pistage et les extras inutiles d'un téléphone Android.<br>
+  Pour Windows, macOS et Linux. Des choix en langage clair, une sauvegarde de tout, une annulation en un clic.
 </p>
 
 <p align="center">
   <a href="../../releases/latest"><img alt="Dernière version" src="https://img.shields.io/github/v/release/matguitarist/UnbloatMyPhone?label=t%C3%A9l%C3%A9charger"></a>
-  <img alt="Android TV, Google TV, Fire TV" src="https://img.shields.io/badge/Android%20TV%20%C2%B7%20Google%20TV%20%C2%B7%20Fire%20TV-green">
+  <img alt="Téléphones Android" src="https://img.shields.io/badge/T%C3%A9l%C3%A9phones%20Android%20%C2%B7%20Google%20Pixel-green">
   <img alt="Windows, macOS, Linux" src="https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-blue">
   <a href="LICENSE"><img alt="Licence MIT" src="https://img.shields.io/github/license/matguitarist/UnbloatMyPhone"></a>
-  <br><sub>Anciennement « Android TV Debloater ».</sub>
+  <br><sub>Le petit frère pour téléphones d'<a href="https://github.com/matguitarist/UnbloatMyTV">UnbloatMyTV</a>.</sub>
   <br><a href="README.md">English version</a>
 </p>
 
-![Choisir ce qu'il faut désactiver](docs/choose-dark-fr.png)
+> **Version préliminaire.** La liste des applications est d'abord optimisée pour les Google Pixel.
+> Les autres marques ont les composants Android et Google, et l'application vous aide à proposer le reste.
 
-## Télécharger
+## Téléchargement
 
-Prenez le fichier de votre ordinateur dans la **[dernière version](../../releases/latest)**. Rien
-d'autre à installer : la première fois, l'application télécharge les outils ADB officiels de Google
+Prenez le fichier correspondant à votre ordinateur dans la **[dernière version](../../releases/latest)**.
+Rien d'autre à installer : la première fois, l'application télécharge les outils ADB officiels de Google
 (environ 7 Mo, depuis `dl.google.com`) dans son propre dossier.
 
 | | Fichier | Premier lancement |
 |---|---|---|
-| **Windows** 10/11 | `UnbloatMyPhone.exe` | SmartScreen peut indiquer un éditeur inconnu (l'exe n'est pas encore signé) : **Informations complémentaires → Exécuter quand même**. |
-| **macOS** 14+ | `UnbloatMyPhone-mac.zip` | Application Mac native pour Apple silicon et Intel, signée et notariée par Apple. Décompressez, placez-la dans Applications, ouvrez-la et autorisez-la à trouver des appareils sur le réseau local. |
-| **Linux** x64 | `UnbloatMyPhone-x86_64.AppImage` | La plupart des distributions (Ubuntu 22.04 et plus récent, Fedora, Debian, Arch…). Rendez-le exécutable (`chmod +x`, ou Propriétés → Autoriser l'exécution) et ouvrez-le. |
+| **Windows** 10/11 | `UnbloatMyPhone.exe` | SmartScreen peut indiquer un éditeur inconnu (l'exe n'est pas encore signé) : **Informations complémentaires → Exécuter quand même**. Un Pixel peut avoir besoin du [pilote USB de Google](https://developer.android.com/studio/run/win-usb). |
+| **macOS** 14+ | `UnbloatMyPhone-mac.zip` | Application Mac native pour Apple silicon et Intel, signée et notarisée par Apple. Décompressez, placez-la dans Applications et ouvrez-la. |
+| **Linux** x64 | `UnbloatMyPhone-x86_64.AppImage` | Rendez-le exécutable (`chmod +x`) et ouvrez-le. En USB, votre utilisateur peut avoir besoin d'accéder au téléphone (paquet `android-udev-rules` sur la plupart des distributions). |
 
-Chaque version se met à jour toute seule : elle affiche les nouveautés et installe la mise à jour en
-quelques secondes.
+Chaque version se met à jour seule : elle affiche les nouveautés et installe la mise à jour en quelques secondes.
 
-## Ce que fait l'application
+## Ce qu'elle fait
 
 **Nettoyer**
-- **Trouve votre téléviseur sur le réseau** et s'y connecte en Wi-Fi ou Ethernet. Sans câble, sans root.
-- **Liste uniquement ce qui se trouve sur votre téléviseur**, expliqué simplement : pistage,
-  publicités et mode démo, composants système inutilisés, fonctions Google, applications
-  préinstallées, réglages de vitesse et de confidentialité.
-- **Coche pour vous les choix sans risque.** Ce que vous pourriez utiliser (recherche vocale,
-  diffusion, streaming) reste décoché, avec un avertissement sur ce qui ne fonctionnera plus.
-- **Accélère le téléviseur** : animations plus rapides, moins d'applications en mémoire, gel des
-  applications laissées en arrière-plan, optimisation des applications, vidage des caches, écran de
-  veille simple.
-- **Bloque publicités et traqueurs pour tout le téléviseur** avec un DNS filtrant, testé sur-le-champ
-  et annulé s'il casse quelque chose.
-- **Sauvegarde, applique, redémarre le téléviseur et le vérifie** : écran d'accueil, internet,
-  résolution de noms.
+- **Trouve votre téléphone toute seule**, branché en USB ou en Wi-Fi avec le débogage sans fil :
+  saisissez le code d'association à 6 chiffres et elle se connecte. Sans root.
+- **Ne liste que ce qui est sur votre téléphone**, expliqué simplement : diagnostics, composants
+  système inutilisés, fonctions Google, applications préinstallées, réglages de vitesse et de confidentialité.
+- **Coche pour vous les choix sans risque.** Ce que vous pourriez utiliser (Photos, Maps,
+  l'application Google, Sécurité personnelle…) reste décoché, avec un avertissement sur ce qui cesse de fonctionner.
+- **Ne touche jamais à ce dont le téléphone a besoin** : vos applications Téléphone et Messages, le
+  clavier, l'écran d'accueil, les Paramètres, les services Google Play, les alertes d'urgence et le cœur d'Android.
+- **Bloque publicités et traqueurs pour tout le téléphone** avec un DNS filtrant, testé sur-le-champ et
+  annulé s'il casse quelque chose.
+- **Sauvegarde, applique, redémarre le téléphone et le vérifie** : écran d'accueil, internet, résolution des noms.
 
-**Garder le téléviseur propre**
-- **Repère quand une mise à jour annule le nettoyage** : les mises à jour du système et les services
-  Google Play réactivent parfois des applications ou réinitialisent des réglages. L'application montre
-  ce qui est revenu et le recoche en un clic.
-- **Les mêmes choix sur le téléviseur suivant**, et les choix peuvent être enregistrés dans un fichier.
-- **Annule exactement n'importe quelle opération** depuis Restaurer, ou réactive toutes les
-  applications en un clic.
-- **Propose un écran d'accueil sans publicité** (Projectivy Launcher, FLauncher, AT4K Launcher, qu'elle peut aussi installer directement depuis GitHub) et peut remettre
-  celui d'origine.
-- **Désactive le débogage pour vous** à la fin, puis **Recommencer** pour le téléviseur suivant.
+**Garder propre**
+- **Remarque quand une mise à jour annule votre nettoyage** et recoche ce qui est revenu en un clic.
+- **Les mêmes choix sur le téléphone suivant**, et des choix enregistrables dans un fichier.
+- **Annule exactement n'importe quel passage** depuis Restaurer, ou réactive toutes les applications en un clic.
+- **Désactive le débogage pour vous** une fois terminé.
 
 **Outils**
-- **Bilan de santé** : mémoire, stockage, processeur, applications qui utilisent le plus de mémoire
-  et applications qui plantent en boucle, avec des conseils simples. Lecture seule.
-- **Écran et télécommande** : voyez l'écran du téléviseur en direct et pilotez-le depuis
-  l'ordinateur, y compris la saisie dans les champs de recherche et de mot de passe.
-- **Installer une application** : déposez un `.apk` sur la fenêtre, pratique sur les téléviseurs
-  sans Play Store.
+- **Bilan de santé** : mémoire, stockage, processeur, les applications qui occupent le plus de
+  mémoire et celles qui plantent en boucle, avec des conseils clairs. Lecture seule.
+- **Installer une application** : déposez un `.apk` sur la fenêtre.
 
-Rien n'est désinstallé : les applications sont désactivées avec la commande Android
-`pm disable-user`, et une réinitialisation d'usine remet aussi tout. Français et anglais ; thèmes
-clair et sombre selon votre système.
+Rien n'est désinstallé : les applications sont désactivées avec la commande `pm disable-user`
+d'Android, et une réinitialisation d'usine remet aussi tout en place. Anglais et français ; les thèmes
+clair et sombre suivent votre système.
 
-## Écrans
+## Avant de commencer, sur le téléphone
 
-| | |
-|---|---|
-| ![Terminé](docs/apply-light-fr.png) | ![Bilan de santé, en anglais](docs/health-light-en.png) |
-| ![Écran et télécommande, en anglais](docs/remote-dark-en.png) | ![L'application Mac, en anglais](docs/mac-welcome-en.png) |
-| ![Fire TV, en anglais](docs/choose-firetv-light-en.png) | ![Choisir](docs/choose-dark-fr.png) |
+1. **Paramètres → À propos du téléphone** : touchez 7 fois **Numéro de build**, jusqu'à ce qu'il indique que vous êtes développeur.
+2. **Paramètres → Système → Options pour les développeurs → Débogage USB** activé.
+3. Branchez le téléphone. Pas de câble ? Activez le **Débogage sans fil** dans le même menu, ouvrez
+   **Associer l'appareil avec un code d'association** et saisissez le code dans l'application.
+4. Acceptez **Autoriser le débogage USB ?** sur le téléphone et cochez *Toujours autoriser sur cet ordinateur*.
 
-## Avant de commencer, sur le téléviseur
+Une fois terminé, le dernier écran désactive de nouveau le débogage.
 
-1. **Paramètres → Préférences de l'appareil → À propos** (Google TV : **Paramètres → Système → À propos**).
-2. Appuyez 7 fois sur OK sur **Build** (ou **Build de l'OS Android TV**), jusqu'au message
-   indiquant que vous êtes développeur.
-3. Revenez d'un écran : **Options pour les développeurs → Débogage USB** activé. S'il existe un
-   interrupteur **Débogage réseau** ou **ADB sur le réseau**, activez-le aussi.
-4. Quand l'application se connecte, acceptez **Autoriser le débogage USB ?** sur le téléviseur et
-   cochez *Toujours autoriser*.
+## Comment elle reste sûre
 
-Sur un **Fire TV** : Paramètres → Ma Fire TV → À propos, appuyez 7 fois sur OK sur le nom de
-l'appareil, puis Options pour les développeurs → **Débogage ADB** activé.
-
-Les appareils Google TV récents qui proposent seulement le **Débogage sans fil** avec un code
-d'association sont pris en charge depuis la page Connecter. À la fin, le dernier écran désactive de
-nouveau le débogage.
-
-## Appareils pris en charge
-
-Tout ce qui fonctionne sous **Android TV** ou **Google TV** : téléviseurs (Sony, TCL, Xiaomi,
-Philips, Hisense…), boîtiers et clés (Chromecast avec Google TV, NVIDIA Shield, Mi Box…) et les
-décodeurs Android TV loués par de nombreux opérateurs.
-
-**Fire TV** (testé sur une Fire TV Stick 4K Max, Fire OS 7.6) : se connecte de la même façon. Fire OS refuse de désactiver les applications d'Amazon :
-l'application ne les propose donc pas. Elle indique quelles options de pistage d'Amazon sont encore
-actives et ouvre le menu du téléviseur pour les désactiver ; les réglages de vitesse et le DNS
-fonctionnent comme d'habitude. Un autre écran d'accueil ne peut pas remplacer complètement
-celui d'Amazon : testé avec Projectivy, il ne prend la main sur le bouton Accueil qu'après le délai
-de 5 secondes d'Android, et l'accueil d'Amazon s'affiche donc d'abord.
-
-**Non pris en charge :** Samsung (Tizen), LG (webOS), Roku et Apple TV utilisent d'autres systèmes.
-Sur un téléviseur Samsung, désactivez le pistage dans **Paramètres → Général → Conditions et
-confidentialité** (Services d'informations de visionnage, Publicité ciblée, Reconnaissance vocale).
-
-## Sécurité
-
-- Seules les applications d'une liste vérifiée ([`shared/catalog.json`](shared/catalog.json)) sont
-  proposées, plus celles installées en plus du système (toujours décochées).
-- Jamais proposés, quoi que dise la liste : toute application pouvant servir d'écran d'accueil, le
-  clavier, les Paramètres, le Play Store, les services Google Play, WebView, le Bluetooth, le cœur
-  d'Android, et les composants dont un décodeur d'opérateur a besoin (section `keep` de la liste).
-- Chaque changement est inscrit dans une sauvegarde avec sa valeur d'origine *avant* d'être
-  appliqué : même une opération interrompue peut être annulée. « Désactiver le Wi-Fi » n'est
-  proposé qu'avec un câble Ethernet.
-- Les sauvegardes (dans des dossiers qui portent encore l'ancien nom de l'application) sont dans `%LOCALAPPDATA%\UnbloatMyPhone\backups` (Mac :
+- Seules les applications d'une liste vérifiée ([`shared/catalog.json`](shared/catalog.json)) sont proposées.
+- Jamais proposés, quoi que dise la liste : les applications Téléphone et SMS par défaut, toute
+  application pouvant servir d'écran d'accueil, le clavier, les Paramètres, le Play Store, les services
+  Google Play, WebView, la téléphonie, le Bluetooth, le NFC, les alertes d'urgence et le cœur d'Android
+  (la section `keep` de la liste et une liste intégrée).
+- Chaque changement est inscrit dans une sauvegarde avec sa valeur d'origine *avant* d'être fait :
+  même un passage interrompu peut être annulé.
+- Les sauvegardes sont dans `%LOCALAPPDATA%\UnbloatMyPhone\backups` (Mac :
   `~/Library/Application Support/UnbloatMyPhone/backups`, Linux : `~/.local/share/UnbloatMyPhone/backups`),
-  avec une copie brute de toutes les applications et de tous les réglages. Même format partout.
+  avec un instantané brut de tous les paquets et réglages. Même format sur tous les systèmes.
 
 ## Confidentialité
 
-L'application n'a ni compte, ni statistiques, ni serveur à elle. En dehors de votre téléviseur, elle
-contacte seulement :
+L'application n'a ni compte, ni statistiques, ni serveur. En plus de votre téléphone, elle ne contacte que :
 - `dl.google.com`, une fois, pour télécharger les outils ADB de Google ;
-- `github.com` pour vérifier s'il existe une nouvelle version (désactivable dans la fenêtre de mise
-  à jour) et récupérer la dernière liste d'applications ;
-- la page « nouveau ticket » de GitHub dans votre navigateur, seulement si vous cliquez sur
-  **Les proposer sur GitHub**, avec le modèle du téléviseur et les noms d'applications à relire.
+- `github.com` pour vérifier s'il existe une nouvelle version (désactivable dans la fenêtre de mise à
+  jour) et récupérer la dernière liste d'applications ;
+- la page « nouveau ticket » de GitHub dans votre navigateur, seulement si vous cliquez sur **Les
+  proposer sur GitHub**, avec le modèle du téléphone et les noms d'applications préremplis pour relecture.
 
 ## Pour les développeurs
 
-Voir la [version anglaise](README.md#for-developers) : compilation des applications Windows, Linux et
-Mac, liste des applications (`shared/catalog.json`) et publication des versions.
-
-## Crédits
-
-Plusieurs entrées du catalogue proviennent des listes d'appareils de
-[cleanyourtv](https://github.com/Gathin23/cleanyourtv) (MIT). Voir [NOTICE](NOTICE).
+Voir la [version anglaise](README.md#for-developers).
 
 ## Licence
 
-MIT. À utiliser à vos risques : l'application ne fait que désactiver et réactiver, mais c'est votre
-appareil.
+MIT. À vos risques : l'application ne fait que désactiver et réactiver, mais c'est votre téléphone.

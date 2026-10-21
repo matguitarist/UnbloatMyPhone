@@ -12,14 +12,13 @@ struct WelcomeView: View {
                 feature("checklist", L("Welcome_F3Title"), L("Welcome_F3Text"))
             }
 
-            Card(title: L("Welcome_PrepTitle"), systemImage: "tv") {
+            Card(title: L("Welcome_PrepTitle"), systemImage: "iphone") {
                 ForEach(1...4, id: \.self) { i in
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Image(systemName: "\(i).circle.fill").foregroundStyle(.tint)
                         Text(L("Welcome_Step\(i)")).fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                Text(L("Welcome_StepFire")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Note(text: L("Welcome_Supported"))
             }
 
@@ -69,7 +68,7 @@ struct ConnectView: View {
     var body: some View {
         PageLayout(title: L("Connect_Title"), subtitle: L("Connect_Lead")) {
             if connect.state == .waitingForApproval {
-                Card(title: L("Connect_ApproveTitle"), systemImage: "tv.badge.wifi") {
+                Card(title: L("Connect_ApproveTitle"), systemImage: "iphone.badge.exclamationmark") {
                     Text(L("Connect_ApproveText")).fixedSize(horizontal: false, vertical: true)
                     ProgressView().progressViewStyle(.linear)
                     Button(L("Common_Cancel")) { connect.cancel() }
@@ -91,49 +90,47 @@ struct ConnectView: View {
             }
 
             Group {
-                if !connect.recent.isEmpty {
-                    Card(title: L("Connect_RecentTitle"), systemImage: "clock.arrow.circlepath") {
-                        Text(L("Connect_RecentText")).foregroundStyle(.secondary)
-                        ForEach(connect.recent) { tv in tvRow(tv) }
-                    }
-                }
-
-                Card(title: L("Connect_FindTitle"), systemImage: "magnifyingglass") {
-                    Text(L("Connect_FindText")).foregroundStyle(.secondary)
-                    HStack(spacing: 12) {
-                        Button(L("Connect_Scan")) { Task { await connect.scan() } }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(connect.isScanning)
-                        if connect.isScanning {
-                            ProgressView(value: connect.scanProgress, total: 100).frame(width: 200)
+                // Phones adb can see, refreshed on its own
+                Card(title: L("Connect_PhonesTitle"), systemImage: "iphone") {
+                    Text(L("Connect_PhonesText")).foregroundStyle(.secondary)
+                    ForEach(connect.phones) { phone in phoneRow(phone) }
+                    if connect.phones.isEmpty {
+                        HStack(spacing: 10) {
+                            ProgressView().controlSize(.small)
+                            Text(L("Connect_Waiting")).foregroundStyle(.secondary)
                         }
                     }
-                    ForEach(connect.found) { tv in tvRow(tv) }
-                    if connect.nothingFound { Note(text: L("Connect_NothingFound"), kind: .warning) }
                 }
 
-                Card(title: L("Connect_ManualTitle"), systemImage: "keyboard") {
-                    Text(L("Connect_ManualText")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                // No cable: wireless debugging with a pairing code
+                Card(title: L("Connect_PairTitle"), systemImage: "wifi") {
+                    Text(L("Connect_PairText")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if connect.pairingSeen { Note(text: L("Connect_PairSeen"), kind: .success) }
                     HStack {
-                        TextField("192.168.1.20", text: $connect.address)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 240)
-                            .onSubmit { connect.connect(to: connect.address) }
-                        Button(L("Connect_Connect")) { connect.connect(to: connect.address) }
+                        TextField("123456", text: $connect.pairCode).textFieldStyle(.roundedBorder).frame(width: 110)
+                            .onSubmit { Task { await connect.pair() } }
+                        TextField("192.168.1.20:37099", text: $connect.pairAddress).textFieldStyle(.roundedBorder).frame(width: 200)
+                        Button(L("Connect_Pair")) { Task { await connect.pair() } }
                             .buttonStyle(.borderedProminent)
+                            .disabled(connect.isPairing)
+                    }
+                    if connect.isPairing { ProgressView().progressViewStyle(.linear) }
+                    if !connect.pairResult.isEmpty {
+                        Text(connect.pairResult).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
                 GroupBox {
-                    DisclosureGroup(L("Connect_PairTitle")) {
+                    DisclosureGroup(L("Connect_ManualTitle")) {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text(L("Connect_PairText")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            Text(L("Connect_ManualText")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             HStack {
-                                TextField("192.168.1.20:37099", text: $connect.pairAddress).textFieldStyle(.roundedBorder).frame(width: 200)
-                                TextField("123456", text: $connect.pairCode).textFieldStyle(.roundedBorder).frame(width: 110)
-                                Button(L("Connect_Pair")) { Task { await connect.pair() } }
+                                TextField("192.168.1.20:41234", text: $connect.manualAddress)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(width: 240)
+                                    .onSubmit { connect.connectManual() }
+                                Button(L("Connect_Connect")) { connect.connectManual() }
                             }
-                            if !connect.pairResult.isEmpty { Text(connect.pairResult).foregroundStyle(.secondary) }
                         }
                         .padding(.top, 8)
                     }
@@ -142,17 +139,21 @@ struct ConnectView: View {
             }
             .disabled(connect.isBusy)
         }
+        .onAppear { connect.startWatching() }
+        .onDisappear { connect.stopWatching() }
     }
 
-    private func tvRow(_ tv: FoundTv) -> some View {
+    private func phoneRow(_ phone: FoundPhone) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: "tv").font(.title3).foregroundStyle(.tint).frame(width: 30)
+            Image(systemName: phone.isWireless ? "wifi" : "cable.connector").font(.title3).foregroundStyle(.tint).frame(width: 30)
             VStack(alignment: .leading, spacing: 1) {
-                Text(tv.name.isEmpty ? tv.address : tv.name).font(.body.weight(.semibold))
-                if !tv.name.isEmpty { Text(tv.address).font(.caption).foregroundStyle(.secondary) }
+                Text(phone.name).font(.body.weight(.semibold))
+                Text(phone.detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
-            Button(L("Connect_ConnectThis")) { connect.connect(to: tv.address) }
+            if phone.canUse {
+                Button(L("Connect_UseThis")) { connect.use(phone) }.buttonStyle(.borderedProminent)
+            }
         }
         .padding(8)
         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))

@@ -51,7 +51,6 @@ struct ContentView: View {
                 case .restore: if let r = model.restore { RestoreView(restore: r) }
                 case .health: if let h = model.health { HealthView(health: h) }
                 case .install: if let i = model.install { InstallView(install: i) }
-                case .remote: if let r = model.remote { RemoteView(remote: r) }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -76,7 +75,7 @@ struct Sidebar: View {
                     .selectionDisabled(!(i == min(model.stepIndex, 3) || model.canNavigate(toStep: i)))
                 }
             }
-            // Tools for the connected TV. In the list, so icons share one column and the open one is highlighted.
+            // Tools for the connected phone. In the list, so icons share one column and the open one is highlighted.
             if model.device != nil {
                 Section(L("Mac_Tools")) {
                     ForEach(Self.tools, id: \.tag) { tool in
@@ -93,7 +92,7 @@ struct Sidebar: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(L("Side_Connected")).font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                         Text(d.displayName).font(.callout.weight(.semibold)).lineLimit(2)
-                        Text(d.ipAddress).font(.caption).foregroundStyle(.secondary)
+                        Text(d.connectionText).font(.caption).foregroundStyle(.secondary)
                     }
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -117,7 +116,6 @@ struct Sidebar: View {
 extension Sidebar {
     private static let tools: [(tag: Int, key: String, icon: String, page: Page)] = [
         (10, "Side_Health", "waveform.path.ecg", .health),
-        (11, "Side_Remote", "appletvremote.gen4", .remote),
         (12, "Side_Install", "square.and.arrow.down", .install),
         (13, "Side_Restore", "arrow.uturn.backward", .restore),
     ]
@@ -130,7 +128,6 @@ extension Sidebar {
                 guard let tag else { return }
                 switch Self.tools.first(where: { $0.tag == tag })?.page {
                 case .health: model.goHealth()
-                case .remote: model.goRemote()
                 case .install: model.goInstall()
                 case .restore: model.goRestore()
                 default: model.go(toStep: tag)

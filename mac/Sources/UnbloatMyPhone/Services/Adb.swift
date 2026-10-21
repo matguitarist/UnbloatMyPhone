@@ -1,5 +1,11 @@
 import Foundation
 
+/// One line of "adb devices -l". State is device, unauthorized or offline.
+struct AdbDevice: Sendable, Hashable { let serial: String; let state: String; let model: String }
+
+/// A phone announcing wireless debugging: its pairing dialog, or its debugging port once paired.
+struct MdnsService: Sendable, Hashable { let name: String; let address: String; let pairing: Bool }
+
 struct AdbResult: Sendable {
     let exitCode: Int32
     let output: String
@@ -71,35 +77,6 @@ final class Adb: @unchecked Sendable {
         catch { return AdbResult(exitCode: -1, output: "", error: error.localizedDescription) }
     }
 
-    /// Raw bytes from stdout, e.g. "exec-out screencap -p". Nil on failure or timeout.
-    func runBinary(_ args: [String], timeout: TimeInterval = 10) async -> Data? {
-        await startServerIfNeeded()
-        let path = adbURL
-        return await withCheckedContinuation { (cont: CheckedContinuation<Data?, Never>) in
-            let p = Process()
-            p.executableURL = path
-            p.arguments = args
-            let out = Pipe()
-            let buf = Shell.Buffer()
-            p.standardOutput = out
-            p.standardError = FileHandle.nullDevice
-            out.fileHandleForReading.readabilityHandler = { h in buf.append(h.availableData) }
-            let once = Once()
-            p.terminationHandler = { proc in
-                out.fileHandleForReading.readabilityHandler = nil
-                buf.append(out.fileHandleForReading.readDataToEndOfFile())
-                let data = buf.bytes
-                once.run { cont.resume(returning: proc.terminationStatus == 0 && !data.isEmpty ? data : nil) }
-            }
-            do { try p.run() } catch { once.run { cont.resume(returning: nil) }; return }
-            DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
-                guard p.isRunning else { return }
-                p.terminate()
-                once.run { cont.resume(returning: nil) }
-            }
-        }
-    }
-
     func shell(_ serial: String, _ command: String, timeout: TimeInterval = 20) async -> AdbResult {
         await run(["-s", serial, "shell", command], timeout: timeout)
     }
@@ -110,6 +87,49 @@ final class Adb: @unchecked Sendable {
         for line in r.output.split(separator: "\n") {
             let parts = line.split(whereSeparator: { $0 == "\t" || $0 == " " })
             if parts.count >= 2, parts[0] == serial { return String(parts[1]) }
+        }
+        return nil
+    }
+
+    /// "192.168.1.20:41234", or "adb-SERIAL-xyz._adb-tls-connect._tcp" when adb found the phone on its own.
+    static func isWireless(_ serial: String) -> Bool { serial.contains(":") || serial.contains("._adb-tls-connect.") }
+
+    /// Every phone adb sees, from "adb devices -l".
+    func devices() async -> [AdbDevice] {
+        let r = await run(["devices", "-l"], timeout: 10)
+        return r.output.split(separator: "\n").dropFirst().compactMap { line in
+            let parts = line.split(whereSeparator: { $0 == " " || $0 == "\t" }).map(String.init)
+            guard parts.count >= 2 else { return nil }
+            let model = parts.first { $0.hasPrefix("model:") }.map { String($0.dropFirst("model:".count)).replacingOccurrences(of: "_", with: " ") } ?? ""
+            return AdbDevice(serial: parts[0], state: parts[1], model: model)
+        }
+    }
+
+    /// What wireless debugging announces on the network ("adb mdns services").
+    func mdnsServices() async -> [MdnsService] {
+        let r = await run(["mdns", "services"], timeout: 10)
+        return r.output.split(separator: "\n").compactMap { line in
+            // adb-SERIAL-xyz	_adb-tls-pairing._tcp	192.168.1.20:37099
+            let parts = line.split(whereSeparator: { $0 == "\t" || $0 == " " }).map(String.init)
+            guard parts.count >= 3, parts[2].contains(":") else { return nil }
+            if parts[1].hasPrefix("_adb-tls-pairing") { return MdnsService(name: parts[0], address: parts[2], pairing: true) }
+            if parts[1].hasPrefix("_adb-tls-connect") { return MdnsService(name: parts[0], address: parts[2], pairing: false) }
+            return nil
+        }
+    }
+
+    /// The serial a phone answers on now. Over Wi-Fi the port changes when the phone restarts,
+    /// so look for it again by its hardware serial number and reconnect.
+    func findAgain(_ serial: String, serialNo: String) async -> String? {
+        let list = await devices()
+        if list.contains(where: { $0.serial == serial && $0.state == "device" }) { return serial }
+        guard !serialNo.isEmpty else { return nil }
+        if let same = list.first(where: { $0.state == "device" && ($0.serial == serialNo || $0.serial.hasPrefix("adb-\(serialNo)-")) }) {
+            return same.serial
+        }
+        if let svc = await mdnsServices().first(where: { !$0.pairing && $0.name.hasPrefix("adb-\(serialNo)-") }) {
+            _ = await run(["connect", svc.address], timeout: 10)
+            if await state(svc.address) == "device" { return svc.address }
         }
         return nil
     }
