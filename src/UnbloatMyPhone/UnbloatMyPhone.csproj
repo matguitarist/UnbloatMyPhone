@@ -12,7 +12,7 @@
     <ApplicationIcon Condition="Exists('Assets\app.ico')">Assets\app.ico</ApplicationIcon>
     <!-- Localised text is bound by key at runtime, so bindings stay reflection-based. -->
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
-    <Version>0.5.0</Version>
+    <Version>0.5.1</Version>
     <Product>UnbloatMyPhone</Product>
     <Description>Disable bloatware and tracking on Android phones, with a one-click restore.</Description>
     <Copyright>MIT License</Copyright>
