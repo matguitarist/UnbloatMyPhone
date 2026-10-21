@@ -77,7 +77,7 @@ Une fois terminé, le dernier écran désactive de nouveau le débogage.
 
 - Seules les applications d'une liste vérifiée ([`shared/catalog.json`](shared/catalog.json)) sont proposées.
 - Jamais proposés, quoi que dise la liste : les applications Téléphone et SMS par défaut, toute
-  application pouvant servir d'écran d'accueil, le clavier, les Paramètres, le Play Store, les services
+  application pouvant servir d'écran d'accueil, le clavier, l'application qui gère un profil professionnel ou un téléphone d'entreprise, les Paramètres, le Play Store, les services
   Google Play, WebView, la téléphonie, le Bluetooth, le NFC, les alertes d'urgence et le cœur d'Android
   (la section `keep` de la liste et une liste intégrée).
 - Chaque changement est inscrit dans une sauvegarde avec sa valeur d'origine *avant* d'être fait :

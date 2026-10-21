@@ -19,6 +19,8 @@ public sealed class PhoneDevice
     public string InputMethodPackage { get; init; } = "";
     /// <summary>The default Phone and SMS apps: turning them off would leave the phone unable to call or text.</summary>
     public HashSet<string> RoleHolders { get; init; } = [];
+    /// <summary>Apps that manage the phone or its work profile (Android Device Policy, for example).</summary>
+    public HashSet<string> PolicyOwners { get; init; } = [];
     public bool SetupComplete { get; init; }
     public long StorageTotalMb { get; init; }
     public long StorageFreeMb { get; init; }
@@ -51,7 +53,7 @@ public sealed class PhoneDevice
     /// <summary>Packages that must never be disabled, whatever the catalog says.</summary>
     public bool IsProtected(string pkg) =>
         pkg == HomePackage || HomeCapable.Contains(pkg) || pkg == InputMethodPackage || RoleHolders.Contains(pkg) ||
-        ProtectedPackages.Contains(pkg);
+        PolicyOwners.Contains(pkg) || ProtectedPackages.Contains(pkg);
 
     private static readonly HashSet<string> ProtectedPackages =
     [
@@ -105,6 +107,13 @@ public sealed class PhoneDevice
             .Where(l => l.Contains('.') && !l.Contains(' '))
             .ToHashSet();
 
+        // "User 10: admin=com.google.android.apps.work.clouddpc/.receivers...,ManagedProfileOwner(parentUserId=0)"
+        var owners = await adb.ShellAsync(serial, "dpm list-owners");
+        var policyOwners = owners.Output.Split('\n')
+            .Where(l => l.Contains("admin=") && l.Contains('/'))
+            .Select(l => l[(l.IndexOf("admin=") + 6)..l.IndexOf('/', l.IndexOf("admin="))].Trim())
+            .ToHashSet();
+
         var setup = await adb.ShellAsync(serial, "settings get secure user_setup_complete");
         var storage = await ReadStorageAsync(adb, serial);
 
@@ -122,6 +131,7 @@ public sealed class PhoneDevice
             HomeCapable = homeCapable,
             InputMethodPackage = imePkg,
             RoleHolders = roleHolders,
+            PolicyOwners = policyOwners,
             SetupComplete = setup.Output.Trim() == "1",
             StorageTotalMb = storage.TotalMb,
             StorageFreeMb = storage.FreeMb,

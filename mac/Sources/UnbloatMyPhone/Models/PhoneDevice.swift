@@ -16,6 +16,8 @@ struct PhoneDevice: Sendable {
     var inputMethodPackage = ""
     /// The default Phone and SMS apps: turning them off would leave the phone unable to call or text.
     var roleHolders: Set<String> = []
+    /// Apps that manage the phone or its work profile (Android Device Policy, for example).
+    var policyOwners: Set<String> = []
     var setupComplete = false
     var storageTotalMb: Int64 = 0
     var storageFreeMb: Int64 = 0
@@ -44,7 +46,7 @@ struct PhoneDevice: Sendable {
     /// Packages that must never be disabled, whatever the catalog says.
     func isProtected(_ pkg: String) -> Bool {
         pkg == homePackage || homeCapable.contains(pkg) || pkg == inputMethodPackage || roleHolders.contains(pkg)
-            || Self.protectedPackages.contains(pkg)
+            || policyOwners.contains(pkg) || Self.protectedPackages.contains(pkg)
     }
 
     static let protectedPackages: Set<String> = [
@@ -94,6 +96,13 @@ struct PhoneDevice: Sendable {
         d.roleHolders = Set(roles.split(whereSeparator: { $0 == "\n" || $0 == ";" })
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { $0.contains(".") && !$0.contains(" ") })
+
+        // "User 10: admin=com.google.android.apps.work.clouddpc/.receivers...,ManagedProfileOwner(parentUserId=0)"
+        let owners = await adb.shell(serial, "dpm list-owners").output
+        d.policyOwners = Set(owners.split(separator: "\n").compactMap { line -> String? in
+            guard let a = line.range(of: "admin="), let slash = line[a.upperBound...].firstIndex(of: "/") else { return nil }
+            return String(line[a.upperBound..<slash]).trimmingCharacters(in: .whitespaces)
+        })
 
         d.setupComplete = await adb.shell(serial, "settings get secure user_setup_complete").output
             .trimmingCharacters(in: .whitespacesAndNewlines) == "1"

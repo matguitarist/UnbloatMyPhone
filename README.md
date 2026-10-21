@@ -76,7 +76,7 @@ When you are done, the last screen turns debugging off again.
 
 - Only apps in a reviewed list ([`shared/catalog.json`](shared/catalog.json)) are offered.
 - Never offered, whatever the list says: the default Phone and SMS apps, any app that can be the home
-  screen, the keyboard, Settings, the Play Store, Google Play services, WebView, telephony, Bluetooth,
+  screen, the keyboard, the app that manages a work profile or company phone, Settings, the Play Store, Google Play services, WebView, telephony, Bluetooth,
   NFC, emergency alerts and the core of Android (the list's `keep` section and a built-in list).
 - Every change is written to a backup with its original value *before* it is made, so even an
   interrupted run can be undone.
