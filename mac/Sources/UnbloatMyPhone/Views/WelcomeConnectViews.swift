@@ -151,6 +151,9 @@ struct ConnectView: View {
                 Text(phone.detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
+            if phone.isBootloader {
+                Button(L("Connect_OpenFlash")) { connect.app?.goFlash(serialNo: phone.serial) }
+            }
             if phone.canUse {
                 Button(L("Connect_UseThis")) { connect.use(phone) }.buttonStyle(.borderedProminent)
             }

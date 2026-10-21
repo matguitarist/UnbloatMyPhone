@@ -21,6 +21,9 @@
       <Border Classes="warn">
         <TextBlock Text="{l:T Flash_Warning}" Foreground="{DynamicResource WarnFg}" TextWrapping="Wrap" />
       </Border>
+      <Border Classes="note" IsVisible="{Binding WifiOnly}">
+        <TextBlock Text="{l:T Flash_WifiOnly}" TextWrapping="Wrap" />
+      </Border>
       <Border Classes="err" IsVisible="{Binding NotPixel}">
         <TextBlock Text="{l:T Flash_NotPixel}" Foreground="{DynamicResource ErrFg}" TextWrapping="Wrap" />
       </Border>

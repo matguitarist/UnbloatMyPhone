@@ -57,6 +57,8 @@ public sealed partial class FlashViewModel : PageViewModel, IFlashLog
     private bool? _oemAllowed;
 
     [ObservableProperty] private string _build = "";
+    /// <summary>Reached over Wi-Fi only: the phone leaves Wi-Fi when it restarts, so jobs need a cable.</summary>
+    [ObservableProperty] private bool _wifiOnly;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BatteryText), nameof(CanAct))]
     private bool _batteryOk = true;
@@ -222,6 +224,7 @@ public sealed partial class FlashViewModel : PageViewModel, IFlashLog
         if ((await Fastboot.ListAsync(adb)).Contains(SerialNo))
         {
             if (await Fastboot.ReadAsync(adb, SerialNo) is not { } b) return;
+            WifiOnly = false;
             Mode = b.IsUserspace ? PhoneMode.Fastbootd : PhoneMode.Bootloader;
             Codename = b.Product;
             Unlocked = b.Unlocked;
@@ -234,6 +237,7 @@ public sealed partial class FlashViewModel : PageViewModel, IFlashLog
         switch (device?.State)
         {
             case "device":
+                WifiOnly = AdbService.IsWirelessSerial(device.Serial);
                 var p = (await adb.ShellAsync(device.Serial,
                     "getprop ro.product.device; getprop ro.build.id; getprop ro.product.manufacturer; getprop ro.boot.flash.locked; getprop sys.oem_unlock_allowed; dumpsys battery | grep level")).Output.Split('\n');
                 string Line(int i) => p.ElementAtOrDefault(i)?.Trim() ?? "";

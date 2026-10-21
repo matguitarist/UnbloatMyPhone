@@ -470,6 +470,7 @@ public static class Strings
         ["Flash_ErrNoAndroid"] = "Android didn't start again within 40 minutes. Look at the phone's screen.",
         ["Flash_ErrNotUpdated"] = "the phone started, but runs {1} instead of {0}. The update didn't go in; the phone kept its previous version.",
         ["Flash_StepUpdated"] = "Done. The phone runs {0}.",
+        ["Flash_WifiOnly"] = "The phone is connected over Wi-Fi. Plug it in with a USB cable before using these tools: it leaves Wi-Fi when it restarts into recovery or bootloader mode.",
     };
 
     public static readonly Dictionary<string, string> Fr = new()
@@ -939,5 +940,6 @@ public static class Strings
         ["Flash_ErrNoAndroid"] = "Android n'a pas redémarré en 40 minutes. Regardez l'écran du téléphone.",
         ["Flash_ErrNotUpdated"] = "le téléphone a démarré, mais avec {1} au lieu de {0}. La mise à jour n'a pas été installée ; le téléphone a gardé sa version précédente.",
         ["Flash_StepUpdated"] = "Terminé. Le téléphone utilise {0}.",
+        ["Flash_WifiOnly"] = "Le téléphone est connecté en Wi-Fi. Branchez-le avec un câble USB avant d'utiliser ces outils : il quitte le Wi-Fi en redémarrant en récupération ou en mode bootloader.",
     };
 }

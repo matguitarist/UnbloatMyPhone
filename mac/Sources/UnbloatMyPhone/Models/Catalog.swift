@@ -55,6 +55,18 @@ enum Catalog {
         var settings: [SettingDef]?
         var keep: [KeepDef]?
         var names: [NameDef]?
+        var imagePages: [ImagePageDef]?
+    }
+    /// One of Google's pages listing Pixel images (Flash and repair).
+    struct ImagePageDef: Codable { var url: String; var kind: String; var beta: Bool?; var name: LocText }
+
+    struct ImagePage { let url: URL; let isOta: Bool; let isBeta: Bool; let name: String }
+
+    /// Google's pages listing factory and OTA images, stable and beta.
+    @MainActor static var imagePages: [ImagePage] {
+        (current.imagePages ?? []).compactMap { p in
+            URL(string: p.url).map { ImagePage(url: $0, isOta: p.kind == "ota", isBeta: p.beta ?? false, name: p.name.text) }
+        }
     }
     /// A readable name for a system part (Health page). Never offered.
     struct NameDef: Codable { var id: String; var name: LocText }

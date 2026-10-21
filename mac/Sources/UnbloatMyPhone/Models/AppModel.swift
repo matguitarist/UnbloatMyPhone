@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import Observation
 
-enum Page { case welcome, connect, choose, apply, restore, info, health, privacy, apps, install }
+enum Page { case welcome, connect, choose, apply, restore, info, health, privacy, apps, install, flash }
 
 /// The whole app's state: which page is showing, the connected phone, and each page's model.
 @MainActor @Observable
@@ -21,6 +21,7 @@ final class AppModel {
     var privacy: PrivacyModel?
     var apps: AppsModel?
     var install: InstallModel?
+    var flash: FlashModel?
 
     init() {
         connect = ConnectModel(app: self)
@@ -32,7 +33,7 @@ final class AppModel {
         switch page {
         case .welcome: 0
         case .connect: 1
-        case .choose, .restore, .info, .health, .privacy, .apps, .install: 2
+        case .choose, .restore, .info, .health, .privacy, .apps, .install, .flash: 2
         case .apply: apply?.isFinished == true ? 4 : 3
         }
     }
@@ -40,11 +41,12 @@ final class AppModel {
     /// Changes are being made to the phone: don't let the user leave the page.
     var isBusy: Bool {
         (page == .apply && apply?.isFinished == false) || (page == .restore && restore?.isBusy == true)
+            || (page == .flash && flash?.isRunning == true)
     }
 
     func canNavigate(toStep n: Int) -> Bool {
         // From a tool page (step 3 too), "Choose" leads back to the list.
-        let onTool = [.restore, .info, .health, .privacy, .apps, .install].contains(page)
+        let onTool = [.restore, .info, .health, .privacy, .apps, .install, .flash].contains(page)
         return (n < stepIndex || (n == 2 && onTool)) && !isBusy && n < 3 && (n != 2 || device != nil)
     }
 
@@ -119,6 +121,19 @@ final class AppModel {
         page = .install
     }
 
+    func goFlash() {
+        guard let dev = device, !isBusy else { return }
+        flash = FlashModel(app: self, serialNo: dev.serialNo, name: dev.displayName)
+        page = .flash
+    }
+
+    /// A phone that is only in bootloader mode (it may not start any more): no adb connection.
+    func goFlash(serialNo: String) {
+        connect.stopWatching()
+        flash = FlashModel(app: self, serialNo: serialNo, name: serialNo)
+        page = .flash
+    }
+
     /// Back to the first page with no phone connected, e.g. to clean another one.
     func startOver() async {
         if let d = device, d.isWireless { _ = await adb.run(["disconnect", d.serial], timeout: 5) }
@@ -158,14 +173,17 @@ final class WelcomeModel {
 /// A phone adb can see: plugged in, connected over Wi-Fi, or announcing wireless debugging.
 struct FoundPhone: Identifiable, Hashable {
     var serial: String
-    /// "device", "unauthorized", "offline", or "announced" (wireless debugging is on, not connected yet).
+    /// "device", "unauthorized", "offline", "announced" (wireless debugging is on, not connected yet) or "bootloader".
     var state: String
     var name: String
     var isWireless: Bool
     var id: String { serial }
     var canUse: Bool { state == "device" || state == "announced" }
+    /// In bootloader mode: only Flash and repair can do anything with it.
+    var isBootloader: Bool { state == "bootloader" }
     var detail: String {
         L(state == "unauthorized" ? "Connect_RowApprove" : state == "offline" ? "Connect_RowOffline"
+          : isBootloader ? "Connect_RowBootloader"
           : isWireless ? "Connect_RowWifi" : "Connect_RowUsb")
     }
 }
@@ -235,6 +253,10 @@ final class ConnectModel {
         var rows = devices.filter { !twice.contains($0.serial) }.map {
             FoundPhone(serial: $0.serial, state: $0.state, name: $0.model.isEmpty ? $0.serial : $0.model, isWireless: Adb.isWireless($0.serial))
         }
+        // A phone in bootloader mode, maybe because Android doesn't start any more.
+        for serial in await Fastboot.list() {
+            rows.append(FoundPhone(serial: serial, state: "bootloader", name: serial, isWireless: false))
+        }
         // Paired phones with wireless debugging on that adb hasn't connected to yet.
         for s in services where !s.pairing && !devices.contains(where: { $0.serial == s.address || $0.serial.hasPrefix(s.name + ".") }) {
             rows.append(FoundPhone(serial: s.address, state: "announced", name: L("Connect_WifiPhone"), isWireless: true))
@@ -301,6 +323,7 @@ final class ConnectModel {
         case "health": app.goHealth()
         case "install": app.goInstall()
         case "restore": app.goRestore()
+        case "flash": app.goFlash()
         default: break
         }
     }

@@ -54,6 +54,7 @@ struct ContentView: View {
                 case .privacy: if let p = model.privacy { PrivacyView(privacy: p) }
                 case .apps: if let a = model.apps { AppsView(apps: a) }
                 case .install: if let i = model.install { InstallView(install: i) }
+                case .flash: if let f = model.flash { FlashView(flash: f) }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -124,6 +125,7 @@ extension Sidebar {
         (14, "Side_Apps", "square.grid.2x2", .apps),
         (12, "Side_Install", "square.and.arrow.down", .install),
         (13, "Side_Restore", "arrow.uturn.backward", .restore),
+        (15, "Side_Flash", "bolt", .flash),
     ]
 
     /// Steps are tagged 0-3, tools 9 and up.
@@ -139,6 +141,7 @@ extension Sidebar {
                 case .apps: model.goApps()
                 case .install: model.goInstall()
                 case .restore: model.goRestore()
+                case .flash: model.goFlash()
                 default: model.go(toStep: tag)
                 }
             })

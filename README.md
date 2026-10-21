@@ -74,6 +74,7 @@ The last screen turns debugging off again when you are done.
 | **My apps** | Your apps with their icon and name as on the phone, plus size, version, install date and where each came from. Apps that didn't come from Google Play are listed and marked. Open, force stop, turn off, archive (Android 15+) or uninstall each one. |
 | **Install an app** | Drop an `.apk` on the window. |
 | **Restore / undo** | Every past run on this phone, with what it changed. Undo one, or turn every app back on. |
+| **Flash and repair** | Pixel phones, for experienced users. Install Google's official updates and betas, go back to the original software or repair a phone that won't start with a factory image, unlock or lock the bootloader, and flash your own images (boot, init_boot, vbmeta…) or a custom ROM zip. Images are downloaded from Google and checked before use. |
 
 The clean-up uninstalls nothing: apps are switched off with Android's own `pm disable-user`, and a
 factory reset brings everything back too. The app is in English and French, and its light or dark
@@ -111,13 +112,19 @@ The screenshots use a made-up phone and made-up apps.
   - Windows: `%LOCALAPPDATA%\UnbloatMyPhone\backups`
   - Mac: `~/Library/Application Support/UnbloatMyPhone/backups`
   - Linux: `~/.local/share/UnbloatMyPhone/backups`
+- Flash and repair follows Google's own `flash-all` script from each factory image, checks every file is
+  made for the connected model, and waits for a yes on the page and on the phone before anything that
+  erases it. Locking the bootloader is only offered right after the app put Google's untouched software
+  back, because locking anything else stops the phone from starting.
 - To show icons and names in My apps, a tiny helper ([`helper/`](helper)) is copied to the phone's
   temp folder, run once and deleted. Nothing is installed on the phone.
 
 ## Privacy
 
 The app has no account, no analytics and no server of its own. Besides your phone, it only contacts:
-- `dl.google.com`, once, for Google's ADB tools;
+- `dl.google.com`, once, for Google's ADB tools, and in Flash and repair for the images you choose;
+- Google's pages listing Pixel images (`developers.google.com`, `developer.android.com`), in Flash and
+  repair, after you accept Google's terms for them;
 - `github.com`, to check for a new version (you can turn this off) and to fetch the latest list of apps;
 - GitHub's "new issue" page in your browser, only when you click **Suggest them on GitHub**. The
   phone model and app IDs are filled in, and you review them before posting.

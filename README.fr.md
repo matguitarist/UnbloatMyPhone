@@ -83,6 +83,7 @@ Le dernier écran désactive de nouveau le débogage une fois terminé.
 | **Mes applications** | Vos applications avec leur icône et leur nom comme sur le téléphone, ainsi que leur taille, leur version, leur date d'installation et leur provenance. Celles qui ne viennent pas de Google Play sont listées et signalées. Ouvrez, forcez l'arrêt, désactivez, archivez (Android 15 et plus) ou désinstallez chacune. |
 | **Installer une application** | Déposez un `.apk` sur la fenêtre. |
 | **Restaurer / annuler** | Chaque passage sur ce téléphone, avec ce qu'il a changé. Annulez-en un, ou réactivez toutes les applications. |
+| **Flasher et réparer** | Téléphones Pixel, pour utilisateurs avertis. Installez les mises à jour et bêtas officielles de Google, revenez au logiciel d'origine ou réparez un téléphone qui ne démarre plus avec une image d'usine, déverrouillez ou verrouillez le bootloader, et flashez vos propres images (boot, init_boot, vbmeta…) ou le zip d'une ROM modifiée. Les images sont téléchargées chez Google et vérifiées avant usage. |
 
 Le nettoyage ne désinstalle rien : les applications sont désactivées avec la commande
 `pm disable-user` d'Android, et une réinitialisation d'usine remet aussi tout en place. L'application
@@ -120,6 +121,10 @@ Les captures montrent un téléphone et des applications fictifs.
   - Windows : `%LOCALAPPDATA%\UnbloatMyPhone\backups`
   - Mac : `~/Library/Application Support/UnbloatMyPhone/backups`
   - Linux : `~/.local/share/UnbloatMyPhone/backups`
+- Flasher et réparer suit le script `flash-all` de Google fourni avec chaque image d'usine, vérifie que
+  chaque fichier est fait pour le modèle branché, et attend un oui sur la page et sur le téléphone avant
+  tout ce qui l'efface. Le verrouillage du bootloader n'est proposé que juste après que l'application a
+  remis le logiciel d'origine de Google, car verrouiller autre chose empêche le téléphone de démarrer.
 - Pour afficher les icônes et les noms dans Mes applications, un minuscule programme
   ([`helper/`](helper)) est copié dans le dossier temporaire du téléphone, lancé une fois puis
   supprimé. Rien n'est installé sur le téléphone.
@@ -128,7 +133,10 @@ Les captures montrent un téléphone et des applications fictifs.
 
 L'application n'a ni compte, ni statistiques, ni serveur à elle. En plus de votre téléphone, elle ne
 contacte que :
-- `dl.google.com`, une fois, pour les outils ADB de Google ;
+- `dl.google.com`, une fois, pour les outils ADB de Google, et dans Flasher et réparer pour les images
+  que vous choisissez ;
+- les pages de Google qui listent les images Pixel (`developers.google.com`, `developer.android.com`),
+  dans Flasher et réparer, après que vous avez accepté les conditions de Google pour celles-ci ;
 - `github.com`, pour vérifier s'il existe une nouvelle version (désactivable) et récupérer la dernière
   liste d'applications ;
 - la page « nouveau ticket » de GitHub dans votre navigateur, seulement si vous cliquez sur **Les
