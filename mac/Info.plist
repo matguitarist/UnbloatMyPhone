@@ -34,7 +34,7 @@
   <key>SUFeedURL</key>
   <string>https://github.com/matguitarist/UnbloatMyPhone/releases/latest/download/appcast.xml</string>
   <key>SUPublicEDKey</key>
-  <string>mhI6/B1USOkApeUcrUKg1a95SUlSAfswmYgZ6RmFYM0=</string>
+  <string>b+goD4bLCxn/KZKTiNUPQeAEyTBBQsAHEtUsAqk7Wzs=</string>
   <key>SUEnableAutomaticChecks</key>
   <true/>
   <key>NSLocalNetworkUsageDescription</key>
