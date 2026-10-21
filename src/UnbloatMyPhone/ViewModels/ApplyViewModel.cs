@@ -208,13 +208,13 @@ public sealed partial class ApplyViewModel(MainViewModel main, PhoneDevice devic
             // Over Wi-Fi the phone comes back on another port.
             if (await Main.Adb.FindAgainAsync(_device.Serial, _device.SerialNo) is { } serial)
             {
-                if (serial != _device.Serial) _device = await PhoneDevice.LoadAsync(Main.Adb, serial);
                 var boot = await Main.Adb.ShellAsync(serial, "getprop sys.boot_completed", 8000);
                 if (boot.Output.Trim() == "1")
                 {
                     step.Detail = Loc.Get("Apply_RebootSettle");
                     await Task.Delay(20000); // let apps and the network settle
                     step.Detail = "";
+                    if (serial != _device.Serial) _device = await PhoneDevice.LoadAsync(Main.Adb, serial);
                     return true;
                 }
             }

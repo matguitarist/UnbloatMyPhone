@@ -610,7 +610,6 @@ final class ApplyModel {
         while Date() < deadline {
             // Over Wi-Fi the phone comes back on another port.
             if let serial = await adb.findAgain(device.serial, serialNo: device.serialNo) {
-                if serial != device.serial { device = await PhoneDevice.load(adb, serial: serial) }
                 guard await adb.shell(serial, "getprop sys.boot_completed", timeout: 8).output
                     .trimmingCharacters(in: .whitespacesAndNewlines) == "1" else {
                     try? await Task.sleep(for: .seconds(3))
@@ -619,6 +618,7 @@ final class ApplyModel {
                 step.detail = L("Apply_RebootSettle")
                 try? await Task.sleep(for: .seconds(20)) // let apps and the network settle
                 step.detail = ""
+                if serial != device.serial { device = await PhoneDevice.load(adb, serial: serial) }
                 return true
             }
             try? await Task.sleep(for: .seconds(3))

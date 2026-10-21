@@ -1,7 +1,7 @@
 {
   "// schema": "Bump 'version' on every change: apps download this file from GitHub and use it when it is newer than their own copy. Bump 'schema' only for changes older apps can't read.",
   "schema": 1,
-  "version": 3,
+  "version": 4,
   "groups": [
     { "id": "telemetry", "title": { "en": "Tracking and diagnostics", "fr": "Pistage et diagnostics" },
       "description": { "en": "Background services that report how the phone is used, or collect logs for support. Nothing you use day to day depends on them.", "fr": "Services en arrière-plan qui signalent l'utilisation du téléphone ou collectent des journaux pour l'assistance. Rien de ce que vous utilisez au quotidien n'en dépend." } },
@@ -337,7 +337,11 @@
       "options": [
         { "label": { "en": "AdGuard DNS: ads and trackers (recommended)", "fr": "AdGuard DNS : publicités et traqueurs (recommandé)" }, "value": "dns.adguard-dns.com" },
         { "label": { "en": "AdGuard Family: also adult content", "fr": "AdGuard Famille : aussi le contenu adulte" }, "value": "family.adguard-dns.com" },
-        { "label": { "en": "Mullvad: ads and trackers", "fr": "Mullvad : publicités et traqueurs" }, "value": "adblock.dns.mullvad.net" }
+        { "label": { "en": "Mullvad: ads and trackers", "fr": "Mullvad : publicités et traqueurs" }, "value": "adblock.dns.mullvad.net" },
+        { "label": { "en": "Mullvad Base: also malware", "fr": "Mullvad Base : aussi les logiciels malveillants" }, "value": "base.dns.mullvad.net" },
+        { "label": { "en": "Control D: ads, trackers and malware", "fr": "Control D : publicités, traqueurs et logiciels malveillants" }, "value": "p2.freedns.controld.com" },
+        { "label": { "en": "Cloudflare: malware only, ads not blocked", "fr": "Cloudflare : logiciels malveillants seulement, publicités non bloquées" }, "value": "security.cloudflare-dns.com" },
+        { "label": { "en": "Cloudflare Family: malware and adult content, ads not blocked", "fr": "Cloudflare Famille : logiciels malveillants et contenu adulte, publicités non bloquées" }, "value": "family.cloudflare-dns.com" }
       ] }
   ]
 }
