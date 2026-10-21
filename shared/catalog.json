@@ -1,7 +1,7 @@
 {
   "// schema": "Bump 'version' on every change: apps download this file from GitHub and use it when it is newer than their own copy. Bump 'schema' only for changes older apps can't read.",
   "schema": 1,
-  "version": 4,
+  "version": 5,
   "groups": [
     { "id": "telemetry", "title": { "en": "Tracking and diagnostics", "fr": "Pistage et diagnostics" },
       "description": { "en": "Background services that report how the phone is used, or collect logs for support. Nothing you use day to day depends on them.", "fr": "Services en arrière-plan qui signalent l'utilisation du téléphone ou collectent des journaux pour l'assistance. Rien de ce que vous utilisez au quotidien n'en dépend." } },
@@ -21,6 +21,9 @@
       "name": { "en": "Google Feedback", "fr": "Commentaires Google" },
       "description": { "en": "Sends feedback and crash reports to Google.", "fr": "Envoie des commentaires et rapports de plantage à Google." } },
     { "id": "com.google.android.apps.internal.betterbug", "group": "telemetry", "recommended": true,
+      "name": { "en": "Bug reporter (beta builds)", "fr": "Signalement de bugs (versions bêta)" },
+      "description": { "en": "Sends bug reports to Google from Android beta builds.", "fr": "Envoie des rapports de bug à Google depuis les versions bêta d'Android." } },
+    { "id": "com.google.android.apps.betterbug", "group": "telemetry", "recommended": true,
       "name": { "en": "Bug reporter (beta builds)", "fr": "Signalement de bugs (versions bêta)" },
       "description": { "en": "Sends bug reports to Google from Android beta builds.", "fr": "Envoie des rapports de bug à Google depuis les versions bêta d'Android." } },
     { "id": "com.google.android.apps.carrier.log", "group": "telemetry", "recommended": false,
@@ -57,6 +60,9 @@
     { "id": "com.google.android.retaildemo", "group": "extras", "recommended": true,
       "name": { "en": "Store demo mode", "fr": "Mode démo magasin" },
       "description": { "en": "The demo shown on phones in shops.", "fr": "La démo affichée sur les téléphones en magasin." } },
+    { "id": "com.google.android.apps.retaildemo.preload", "group": "extras", "recommended": true,
+      "name": { "en": "Store demo content", "fr": "Contenu de la démo magasin" },
+      "description": { "en": "Photos and videos preloaded for the demo shown in shops.", "fr": "Photos et vidéos préchargées pour la démo affichée en magasin." } },
     { "prefix": "android.autoinstalls.config.", "group": "extras", "recommended": true, "requiresSetupComplete": true,
       "name": { "en": "Partner app auto-install", "fr": "Installation automatique d'applications partenaires" },
       "description": { "en": "Lets the Play Store install partner apps on its own during setup.", "fr": "Permet au Play Store d'installer seul des applications partenaires pendant la configuration." } },
@@ -301,7 +307,9 @@
     { "id": "com.google.android.apps.stargate", "why": "Satellite SOS and satellite messaging." },
     { "id": "com.google.android.apps.cbrsnetworkmonitor", "why": "Monitors the CBRS band some carriers use for mobile data." },
     { "id": "com.google.android.apps.pixel.customizationbundle", "why": "Pixel wallpaper packs; turning it off can reset the wallpaper." },
-    { "id": "com.google.android.apps.pulse", "why": "A Pixel background service whose role isn't documented: not offered until it is known." }
+    { "id": "com.google.android.apps.pulse", "why": "A Pixel background service whose role isn't documented: not offered until it is known." },
+    { "id": "com.google.android.apps.healthdata", "why": "Health Connect: where fitness and health apps share their data." },
+    { "id": "com.qorvo.uwb.vendorservice", "why": "Ultra-wideband chip service: Find My Device precision finding, Nearby Share, digital car keys." }
   ],
   "settings": [
     { "id": "animations", "kind": "settings", "group": "performance", "recommended": false,
