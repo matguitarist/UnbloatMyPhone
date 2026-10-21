@@ -171,10 +171,20 @@ public sealed partial class AppsViewModel : PageViewModel
     /// <summary>One backup per visit, started on the first app turned off or on.</summary>
     private Backup? _backup;
 
-    public AppsViewModel(MainViewModel main, PhoneDevice device) : base(main)
+    /// <param name="read">False only for screenshots, which call <see cref="Show"/> themselves.</param>
+    public AppsViewModel(MainViewModel main, PhoneDevice device, bool read = true) : base(main)
     {
         Device = device;
-        _ = RefreshAsync();
+        if (read) _ = RefreshAsync();
+    }
+
+    /// <summary>The list for these apps, with icons and names when given.</summary>
+    public void Show(IEnumerable<InstalledApp> apps, IReadOnlyDictionary<string, PhoneIcons.Entry>? fromPhone = null)
+    {
+        _all = apps.Select(a => new AppRow(this, a, IsNeeded(a))).ToList();
+        foreach (var r in _all)
+            if (fromPhone?.TryGetValue(r.Package, out var e) == true) r.SetFromPhone(e);
+        Filter();
     }
 
     partial void OnSearchChanged(string value) => Filter();

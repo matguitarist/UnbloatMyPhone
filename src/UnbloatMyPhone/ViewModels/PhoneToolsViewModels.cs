@@ -35,10 +35,11 @@ public sealed partial class PhoneInfoViewModel : PageViewModel
     public ObservableCollection<InfoRow> Software { get; } = [];
     public ObservableCollection<InfoRow> Boot { get; } = [];
 
-    public PhoneInfoViewModel(MainViewModel main, PhoneDevice device) : base(main)
+    /// <param name="read">False only for screenshots, which set <see cref="Info"/> themselves.</param>
+    public PhoneInfoViewModel(MainViewModel main, PhoneDevice device, bool read = true) : base(main)
     {
         Device = device;
-        _ = RefreshAsync();
+        if (read) _ = RefreshAsync();
     }
 
     public bool HasInfo => Info is not null;
@@ -217,10 +218,11 @@ public sealed partial class PrivacyViewModel : PageViewModel
     /// <summary>One backup per visit, started on the first removal.</summary>
     private Backup? _backup;
 
-    public PrivacyViewModel(MainViewModel main, PhoneDevice device) : base(main)
+    /// <param name="read">False only for screenshots, which call <see cref="Show"/> themselves.</param>
+    public PrivacyViewModel(MainViewModel main, PhoneDevice device, bool read = true) : base(main)
     {
         Device = device;
-        _ = RefreshAsync();
+        if (read) _ = RefreshAsync();
     }
 
     public override void OnLanguageChanged()
@@ -234,24 +236,27 @@ public sealed partial class PrivacyViewModel : PageViewModel
         IsLoading = true;
         Error = "";
         Groups.Clear();
-        try
-        {
-            var all = await Privacy.ReadAsync(Main.Adb, Device);
-            foreach (var kind in Privacy.Kinds)
-            {
-                var group = new AccessGroup(kind);
-                foreach (var a in all.Where(a => a.Kind == kind)
-                             .OrderBy(a => !a.IsThirdParty).ThenBy(a => Catalog.NameOf(a.Package) ?? a.Package))
-                    group.Rows.Add(new AccessRow(a, Catalog.NameOf(a.Package) ?? a.Package));
-                if (group.Rows.Count > 0) Groups.Add(group);
-            }
-        }
+        try { Show(await Privacy.ReadAsync(Main.Adb, Device)); }
         catch (Exception ex) { Error = ex.Message; }
         finally
         {
             IsLoading = false;
             OnPropertyChanged(nameof(IsEmpty));
         }
+    }
+
+    /// <summary>One group per kind of access, your own apps first.</summary>
+    public void Show(IReadOnlyList<AppAccess> all)
+    {
+        foreach (var kind in Privacy.Kinds)
+        {
+            var group = new AccessGroup(kind);
+            foreach (var a in all.Where(a => a.Kind == kind)
+                         .OrderBy(a => !a.IsThirdParty).ThenBy(a => Catalog.NameOf(a.Package) ?? a.Package))
+                group.Rows.Add(new AccessRow(a, Catalog.NameOf(a.Package) ?? a.Package));
+            if (group.Rows.Count > 0) Groups.Add(group);
+        }
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     [RelayCommand]

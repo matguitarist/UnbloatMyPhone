@@ -16,6 +16,8 @@
   <br><a href="README.fr.md">Version française</a>
 </p>
 
+![Choosing what to turn off](docs/choose-dark-en.png)
+
 > **Early version.** Tuned and tested on Google Pixel phones first. See [Supported phones](#supported-phones).
 
 ## In four steps
@@ -76,6 +78,16 @@ The last screen turns debugging off again when you are done.
 The clean-up uninstalls nothing: apps are switched off with Android's own `pm disable-user`, and a
 factory reset brings everything back too. The app is in English and French, and its light or dark
 theme follows your system.
+
+## Screens
+
+| | |
+|---|---|
+| ![Prepare](docs/welcome-dark-en.png) | ![Done](docs/apply-dark-en.png) |
+| ![My apps](docs/apps-dark-en.png) | ![Privacy check-up](docs/privacy-dark-en.png) |
+| ![Phone info](docs/info-dark-en.png) | ![Health check](docs/health-dark-en.png) |
+
+The screenshots use a made-up phone and made-up apps.
 
 ## Supported phones
 

@@ -16,6 +16,8 @@
   <br><a href="README.md">English version</a>
 </p>
 
+![Choisir ce qu'il faut désactiver](docs/choose-dark-fr.png)
+
 > **Version préliminaire.** Optimisée et testée d'abord sur les Google Pixel. Voir
 > [Téléphones pris en charge](#téléphones-pris-en-charge).
 
@@ -85,6 +87,16 @@ Le dernier écran désactive de nouveau le débogage une fois terminé.
 Le nettoyage ne désinstalle rien : les applications sont désactivées avec la commande
 `pm disable-user` d'Android, et une réinitialisation d'usine remet aussi tout en place. L'application
 est en anglais et en français, et son thème clair ou sombre suit votre système.
+
+## Écrans
+
+| | |
+|---|---|
+| ![Préparer, en anglais](docs/welcome-dark-en.png) | ![Terminé, en anglais](docs/apply-dark-en.png) |
+| ![Mes applications, en anglais](docs/apps-dark-en.png) | ![Bilan de confidentialité, en anglais](docs/privacy-dark-en.png) |
+| ![Infos du téléphone, en anglais](docs/info-dark-en.png) | ![Bilan de santé, en anglais](docs/health-dark-en.png) |
+
+Les captures montrent un téléphone et des applications fictifs.
 
 ## Téléphones pris en charge
 
