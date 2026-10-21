@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>UnbloatMyPhone</string>
+  <key>CFBundleDisplayName</key>
+  <string>UnbloatMyPhone</string>
+  <key>CFBundleIdentifier</key>
+  <string>io.github.matguitarist.UnbloatMyPhone</string>
+  <key>CFBundleExecutable</key>
+  <string>UnbloatMyPhone</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>__VERSION__</string>
+  <key>CFBundleVersion</key>
+  <string>__VERSION__</string>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleLocalizations</key>
+  <array>
+    <string>en</string>
+    <string>fr</string>
+  </array>
+  <key>LSMinimumSystemVersion</key>
+  <string>14.0</string>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.utilities</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>SUFeedURL</key>
+  <string>https://github.com/matguitarist/UnbloatMyPhone/releases/latest/download/appcast.xml</string>
+  <key>SUPublicEDKey</key>
+  <string>mhI6/B1USOkApeUcrUKg1a95SUlSAfswmYgZ6RmFYM0=</string>
+  <key>SUEnableAutomaticChecks</key>
+  <true/>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>UnbloatMyPhone looks for your TV on the home network and connects to it to make the changes you choose.</string>
+</dict>
+</plist>

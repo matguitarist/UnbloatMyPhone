@@ -1,0 +1,77 @@
+using System.ComponentModel;
+using System.Globalization;
+using Avalonia.Data;
+using Avalonia.Markup.Xaml;
+
+namespace UnbloatMyPhone.Localization;
+
+/// <summary>Current UI language and string lookup. Views bind through <see cref="T"/>.</summary>
+public sealed class Loc : INotifyPropertyChanged
+{
+    public static Loc Instance { get; } = new();
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    public event Action? LanguageChanged;
+
+    private string _language;
+
+    private Loc()
+    {
+        _language = Services.AppSettings.Current.Language is "en" or "fr"
+            ? Services.AppSettings.Current.Language
+            : (CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "fr" ? "fr" : "en");
+    }
+
+    public string Language
+    {
+        get => _language;
+        set
+        {
+            if (value == _language || (value != "en" && value != "fr")) return;
+            _language = value;
+            Services.AppSettings.Current.Language = value;
+            Services.AppSettings.Current.Save();
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Language)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsFrench)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsEnglish)));
+            // "Item[]" refreshes every indexer binding, i.e. every {l:T} in the UI.
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
+            LanguageChanged?.Invoke();
+        }
+    }
+
+    public bool IsFrench { get => _language == "fr"; set { if (value) Language = "fr"; } }
+    public bool IsEnglish { get => _language == "en"; set { if (value) Language = "en"; } }
+
+    public string this[string key] => Get(key);
+
+    public static string Get(string key)
+    {
+        var table = Instance._language == "fr" ? Strings.Fr : Strings.En;
+        if (table.TryGetValue(key, out var s)) return s;
+        return Strings.En.TryGetValue(key, out var en) ? en : key;
+    }
+
+    /// <summary>Numbers and dates follow the app's language, not the computer's region.</summary>
+    public static CultureInfo Culture => CultureInfo.GetCultureInfo(Instance._language == "fr" ? "fr-FR" : "en-US");
+
+    public static string Format(string key, params object[] args) =>
+        string.Format(Culture, Get(key), args);
+}
+
+/// <summary>Text in both languages, for catalog entries.</summary>
+public sealed record LocText(string En, string Fr)
+{
+    public override string ToString() => Loc.Instance.Language == "fr" && Fr.Length > 0 ? Fr : En;
+}
+
+/// <summary>XAML: Text="{l:T Welcome_Title}"</summary>
+public sealed class T : MarkupExtension
+{
+    public T() { }
+    public T(string key) => Key = key;
+    public string Key { get; set; } = "";
+
+    public override object ProvideValue(IServiceProvider serviceProvider) =>
+        new Binding($"[{Key}]") { Source = Loc.Instance, Mode = BindingMode.OneWay };
+}

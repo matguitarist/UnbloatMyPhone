@@ -1,0 +1,2 @@
+ADB (Android platform-tools) is not included. It is downloaded at runtime from
+Google (dl.google.com) under the Android SDK licence.

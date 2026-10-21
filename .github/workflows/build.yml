@@ -1,0 +1,163 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish single-file exe
+        run: dotnet publish src/UnbloatMyPhone -c Release -r win-x64 -o publish
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: publish/UnbloatMyPhone.exe
+
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build the AppImage
+        run: linux/build-appimage.sh
+      - name: Plain program too (older copies update from it)
+        run: cp linux/build/publish/UnbloatMyPhone linux/build/UnbloatMyPhone-linux-x64
+      # Start it on a virtual screen: still running after 15 s means it launched.
+      - name: Check that the AppImage starts
+        run: |
+          sudo apt-get install -y -qq xvfb libfuse2 > /dev/null
+          set +e
+          xvfb-run -a timeout 15 linux/build/UnbloatMyPhone-x86_64.AppImage
+          code=$?
+          set -e
+          echo "exit code $code"
+          test "$code" -eq 124
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            linux/build/UnbloatMyPhone-x86_64.AppImage
+            linux/build/UnbloatMyPhone-x86_64.AppImage.zsync
+            linux/build/UnbloatMyPhone-linux-x64
+          if-no-files-found: error
+
+  # Native SwiftUI app, universal (Apple silicon and Intel). On version tags it is signed with the
+  # Developer ID certificate, notarized, stapled, and an appcast.xml is written for Sparkle.
+  mac:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sparkle tools
+        run: |
+          mkdir -p mac/.tools/sparkle
+          curl -sL https://github.com/sparkle-project/Sparkle/releases/download/2.10.0/Sparkle-2.10.0.tar.xz | tar -xJ -C mac/.tools/sparkle
+      - name: Signing, notarization and update keys
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          # A throwaway keychain holding only the Developer ID certificate.
+          KC="$RUNNER_TEMP/signing.keychain-db"
+          KCPW="$(uuidgen)"
+          security create-keychain -p "$KCPW" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KCPW" "$KC"
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KC" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KCPW" "$KC" > /dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          IDENTITY="$(security find-identity -v -p codesigning "$KC" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')"
+          test -n "$IDENTITY"
+          echo "SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
+          # Notarization with the Apple ID and an app-specific password (no App Store involved).
+          test -n "$NOTARY_APPLE_ID" && test -n "$NOTARY_PASSWORD"
+          echo "::add-mask::$NOTARY_PASSWORD"
+          echo "NOTARY_APPLE_ID=$NOTARY_APPLE_ID" >> "$GITHUB_ENV"
+          echo "NOTARY_PASSWORD=$NOTARY_PASSWORD" >> "$GITHUB_ENV"
+          echo "NOTARY_TEAM_ID=$(echo "$IDENTITY" | sed -E 's/.*\(([A-Z0-9]+)\)$/\1/')" >> "$GITHUB_ENV"
+
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$RUNNER_TEMP/sparkle.key"
+          echo "SPARKLE_KEY_FILE=$RUNNER_TEMP/sparkle.key" >> "$GITHUB_ENV"
+
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          git tag -l --format='%(contents:body)' "${GITHUB_REF_NAME}" > "$RUNNER_TEMP/notes.md"
+          echo "NOTES_FILE=$RUNNER_TEMP/notes.md" >> "$GITHUB_ENV"
+      - name: Build the app
+        run: ARCHS="arm64 x86_64" mac/build-app.sh
+      - name: Remove keys
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/sparkle.key"
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: |
+            mac/build/UnbloatMyPhone-mac.zip
+            mac/build/appcast.xml
+          if-no-files-found: ignore
+
+  # The in-place update (rename the running exe, move the new one in) only works on Windows.
+  update-swap-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish test exe
+        run: dotnet publish tools/UpdateSwapTest -c Release -r win-x64 -o swaptest
+      - name: Update itself from the latest release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: .\swaptest\UpdateSwapTest.exe
+      - name: Close the copy the update started
+        if: always()
+        run: Stop-Process -Name UpdateSwapTest -ErrorAction SilentlyContinue
+
+  # One release with all three builds, once they are all ready.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux, mac]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      # The annotated tag's message becomes the release notes, which the update dialogs show.
+      - name: Release notes from the tag message
+        run: |
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          git tag -l --format='%(contents:body)' "${GITHUB_REF_NAME}" > notes.md
+          chmod +x dist/UnbloatMyPhone-linux-x64 dist/UnbloatMyPhone-x86_64.AppImage
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: notes.md
+          files: |
+            dist/UnbloatMyPhone.exe
+            dist/UnbloatMyPhone-linux-x64
+            dist/UnbloatMyPhone-x86_64.AppImage
+            dist/UnbloatMyPhone-x86_64.AppImage.zsync
+            dist/UnbloatMyPhone-mac.zip
+            dist/appcast.xml

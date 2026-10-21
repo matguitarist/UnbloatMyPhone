@@ -1,0 +1,14 @@
+bin/
+obj/
+publish/
+*.user
+.vs/
+.vscode/
+.idea/
+.DS_Store
+mac/.build/
+mac/build/
+swaptest/
+mac/.tools/
+linux/build/
+linux/*.zsync
