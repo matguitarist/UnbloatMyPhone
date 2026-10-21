@@ -19,6 +19,7 @@
     <DataTemplate DataType="vm:PhoneInfoViewModel"><v:PhoneInfoView /></DataTemplate>
     <DataTemplate DataType="vm:HealthViewModel"><v:HealthView /></DataTemplate>
     <DataTemplate DataType="vm:PrivacyViewModel"><v:PrivacyView /></DataTemplate>
+    <DataTemplate DataType="vm:AppsViewModel"><v:AppsView /></DataTemplate>
     <DataTemplate DataType="vm:InstallViewModel"><v:InstallView /></DataTemplate>
   </Window.DataTemplates>
 
@@ -155,6 +156,12 @@
               <StackPanel Orientation="Horizontal" Spacing="9">
                 <Path Data="M12 3 L19 6 V11 C19 15.5 16 19 12 21 C8 19 5 15.5 5 11 V6 Z" />
                 <TextBlock Text="{l:T Side_Privacy}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="link tool" Classes.current="{Binding OnApps}" Command="{Binding GoAppsCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="9">
+                <Path Data="M4 4 H10 V10 H4 Z M14 4 H20 V10 H14 Z M4 14 H10 V20 H4 Z M14 14 H20 V20 H14 Z" />
+                <TextBlock Text="{l:T Side_Apps}" />
               </StackPanel>
             </Button>
             <Button Classes="link tool" Classes.current="{Binding OnInstall}" Command="{Binding GoInstallCommand}">

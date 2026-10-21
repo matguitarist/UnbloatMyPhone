@@ -52,6 +52,7 @@ struct ContentView: View {
                 case .info: if let i = model.info { PhoneInfoView(info: i) }
                 case .health: if let h = model.health { HealthView(health: h) }
                 case .privacy: if let p = model.privacy { PrivacyView(privacy: p) }
+                case .apps: if let a = model.apps { AppsView(apps: a) }
                 case .install: if let i = model.install { InstallView(install: i) }
                 }
             }
@@ -120,6 +121,7 @@ extension Sidebar {
         (9, "Side_Info", "info.circle", .info),
         (10, "Side_Health", "waveform.path.ecg", .health),
         (11, "Side_Privacy", "hand.raised", .privacy),
+        (14, "Side_Apps", "square.grid.2x2", .apps),
         (12, "Side_Install", "square.and.arrow.down", .install),
         (13, "Side_Restore", "arrow.uturn.backward", .restore),
     ]
@@ -134,6 +136,7 @@ extension Sidebar {
                 case .info: model.goInfo()
                 case .health: model.goHealth()
                 case .privacy: model.goPrivacy()
+                case .apps: model.goApps()
                 case .install: model.goInstall()
                 case .restore: model.goRestore()
                 default: model.go(toStep: tag)

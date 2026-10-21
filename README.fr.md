@@ -64,6 +64,10 @@ Chaque version se met à jour seule : elle affiche les nouveautés et installe l
   bootloader (après confirmation).
 - **Bilan de santé** : mémoire, stockage, processeur, les applications qui occupent le plus de
   mémoire et celles qui plantent en boucle, avec des conseils clairs. Lecture seule.
+- **Mes applications** : les applications que vous avez installées, avec leur taille, leur version,
+  leur date d'installation et leur provenance (Google Play, un fichier, une autre boutique).
+  Ouvrez-les, forcez leur arrêt, désactivez-les (annulable depuis Restaurer), archivez-les
+  (Android 15 et plus, garde les données) ou désinstallez-les.
 - **Installer une application** : déposez un `.apk` sur la fenêtre.
 
 Rien n'est désinstallé : les applications sont désactivées avec la commande `pm disable-user`

@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import Observation
 
-enum Page { case welcome, connect, choose, apply, restore, info, health, privacy, install }
+enum Page { case welcome, connect, choose, apply, restore, info, health, privacy, apps, install }
 
 /// The whole app's state: which page is showing, the connected phone, and each page's model.
 @MainActor @Observable
@@ -19,6 +19,7 @@ final class AppModel {
     var info: PhoneInfoModel?
     var health: HealthModel?
     var privacy: PrivacyModel?
+    var apps: AppsModel?
     var install: InstallModel?
 
     init() {
@@ -31,7 +32,7 @@ final class AppModel {
         switch page {
         case .welcome: 0
         case .connect: 1
-        case .choose, .restore, .info, .health, .privacy, .install: 2
+        case .choose, .restore, .info, .health, .privacy, .apps, .install: 2
         case .apply: apply?.isFinished == true ? 4 : 3
         }
     }
@@ -43,7 +44,7 @@ final class AppModel {
 
     func canNavigate(toStep n: Int) -> Bool {
         // From a tool page (step 3 too), "Choose" leads back to the list.
-        let onTool = [.restore, .info, .health, .privacy, .install].contains(page)
+        let onTool = [.restore, .info, .health, .privacy, .apps, .install].contains(page)
         return (n < stepIndex || (n == 2 && onTool)) && !isBusy && n < 3 && (n != 2 || device != nil)
     }
 
@@ -98,6 +99,12 @@ final class AppModel {
         guard let dev = device, !isBusy else { return }
         privacy = PrivacyModel(device: dev)
         page = .privacy
+    }
+
+    func goApps() {
+        guard let dev = device, !isBusy else { return }
+        apps = AppsModel(app: self, device: dev)
+        page = .apps
     }
 
     func goHealth() {
@@ -286,10 +293,11 @@ final class ConnectModel {
         app.device = await PhoneDevice.load(adb, serial: serial)
         stopWatching()
         await app.goChoose()
-        // Development aid, with UMP_CONNECT: UMP_PAGE=info|health|privacy|install|restore opens a tool page (read-only).
+        // Development aid, with UMP_CONNECT: UMP_PAGE=info|health|privacy|apps|install|restore opens a tool page (read-only).
         switch ProcessInfo.processInfo.environment["UMP_PAGE"] {
         case "info": app.goInfo()
         case "privacy": app.goPrivacy()
+        case "apps": app.goApps()
         case "health": app.goHealth()
         case "install": app.goInstall()
         case "restore": app.goRestore()
