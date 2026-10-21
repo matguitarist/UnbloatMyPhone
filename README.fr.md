@@ -18,7 +18,7 @@
 
 ![Choisir ce qu'il faut désactiver](docs/choose-dark-fr.png)
 
-> **Version préliminaire.** Optimisée et testée d'abord sur les Google Pixel. Voir
+> **Version préliminaire.** Optimisée d'abord pour les Google Pixel, avec une première série d'entrées Samsung. Voir
 > [Téléphones pris en charge](#téléphones-pris-en-charge).
 
 ## En quatre étapes
@@ -103,7 +103,7 @@ Les captures montrent un téléphone et des applications fictifs.
 | | |
 |---|---|
 | **Google Pixel** | La liste complète, testée sur un Pixel 7 Pro et un Pixel 10 Pro XL sous Android 17, profils professionnels compris. |
-| **Samsung Galaxy** | Une première série d'applications Samsung et de composants à garder. Pas encore testée sur un vrai Galaxy. |
+| **Samsung Galaxy** | Une première série d'applications Samsung et de composants à garder, testée sur un Galaxy A15 5G sous Android 15. D'autres modèles Galaxy peuvent avoir des applications que la liste ne connaît pas encore. |
 | **Autres téléphones Android** | Les composants Android et Google. Les applications que la liste ne connaît pas sont affichées, et **Les proposer sur GitHub** aide à les ajouter pour tout le monde. |
 
 ## Comment elle reste sûre
