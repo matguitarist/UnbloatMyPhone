@@ -1,0 +1,228 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:UnbloatMyPhone.Localization"
+             x:Class="UnbloatMyPhone.Views.FlashView">
+  <UserControl.Styles>
+    <Style Selector="Grid.fact">
+      <Setter Property="Margin" Value="0,3" />
+    </Style>
+  </UserControl.Styles>
+  <ScrollViewer>
+    <StackPanel Margin="44,38,44,40" MaxWidth="860" HorizontalAlignment="Left" Spacing="22">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" VerticalAlignment="Top" Content="{l:T Flash_Refresh}"
+                Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsRunning}" />
+        <StackPanel Spacing="8">
+          <TextBlock Classes="h1" Text="{l:T Flash_Title}" />
+          <TextBlock Classes="lead" Text="{l:T Flash_Lead}" />
+        </StackPanel>
+      </DockPanel>
+
+      <Border Classes="warn">
+        <TextBlock Text="{l:T Flash_Warning}" Foreground="{DynamicResource WarnFg}" TextWrapping="Wrap" />
+      </Border>
+      <Border Classes="err" IsVisible="{Binding NotPixel}">
+        <TextBlock Text="{l:T Flash_NotPixel}" Foreground="{DynamicResource ErrFg}" TextWrapping="Wrap" />
+      </Border>
+
+      <!-- What is running, and how it went -->
+      <Border Classes="card" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontWeight="SemiBold"
+                     Classes.err="{Binding StatusIsError}" Classes.ok="{Binding StatusIsDone}" />
+          <ProgressBar IsVisible="{Binding IsRunning}" IsIndeterminate="{Binding !ProgressKnown}"
+                       Minimum="0" Maximum="1" Value="{Binding Progress}" />
+          <Button Content="{l:T Flash_StopDownload}" Command="{Binding StopCommand}" IsVisible="{Binding CanStop}" />
+          <Expander Header="{l:T Flash_Log}" IsVisible="{Binding LogText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <SelectableTextBlock Classes="mono" Text="{Binding LogText}" TextWrapping="Wrap" MaxHeight="260" />
+          </Expander>
+        </StackPanel>
+      </Border>
+
+      <!-- The phone -->
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="h2" Text="{Binding Name}" />
+          <StackPanel>
+            <Grid Classes="fact" ColumnDefinitions="200,*">
+              <TextBlock Classes="muted" Text="{l:T Flash_Mode}" />
+              <TextBlock Grid.Column="1" Text="{Binding ModeText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+            </Grid>
+            <StackPanel IsVisible="{Binding Found}">
+              <Grid Classes="fact" ColumnDefinitions="200,*" IsVisible="{Binding HasCodename}">
+                <TextBlock Classes="muted" Text="{l:T Flash_Codename}" />
+                <TextBlock Grid.Column="1" Text="{Binding Codename}" FontWeight="SemiBold" />
+              </Grid>
+              <Grid Classes="fact" ColumnDefinitions="200,*" IsVisible="{Binding Build, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock Classes="muted" Text="{l:T Flash_Software}" />
+                <TextBlock Grid.Column="1" Text="{Binding Build}" FontWeight="SemiBold" />
+              </Grid>
+              <Grid Classes="fact" ColumnDefinitions="200,*">
+                <TextBlock Classes="muted" Text="{l:T Flash_Bootloader}" />
+                <TextBlock Grid.Column="1" Text="{Binding LockText}" FontWeight="SemiBold" />
+              </Grid>
+              <Grid Classes="fact" ColumnDefinitions="200,*" IsVisible="{Binding IsLocked}">
+                <TextBlock Classes="muted" Text="{l:T Flash_OemUnlock}" />
+                <TextBlock Grid.Column="1" Text="{Binding OemText}" FontWeight="SemiBold" />
+              </Grid>
+              <Grid Classes="fact" ColumnDefinitions="200,*">
+                <TextBlock Classes="muted" Text="{l:T Flash_Battery}" />
+                <TextBlock Grid.Column="1" Text="{Binding BatteryText}" FontWeight="SemiBold" />
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+          <WrapPanel IsVisible="{Binding Found}">
+            <Button Content="{l:T Flash_ToBootloader}" Command="{Binding ToBootloaderCommand}" IsVisible="{Binding !InBootloader}"
+                    IsEnabled="{Binding !IsRunning}" Margin="0,0,10,0" />
+            <Button Content="{l:T Flash_ToAndroid}" Command="{Binding ToAndroidCommand}" IsVisible="{Binding !InAndroid}"
+                    IsEnabled="{Binding !IsRunning}" Margin="0,0,10,0" />
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Google's terms, once -->
+      <Border Classes="card" IsVisible="{Binding NeedTerms}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="{l:T Flash_TermsTitle}" />
+          <TextBlock Classes="muted" Text="{l:T Flash_TermsText}" TextWrapping="Wrap" />
+          <WrapPanel>
+            <Button Classes="accent" Content="{l:T Flash_TermsAccept}" Command="{Binding AcceptTermsCommand}" Margin="0,0,10,0" />
+            <Button Classes="link" Content="{l:T Flash_TermsRead}" Command="{Binding ReadTermsCommand}" VerticalAlignment="Center" />
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+      <TextBlock Classes="muted" Text="{l:T Flash_Loading}" IsVisible="{Binding LoadingImages}" />
+      <Border Classes="note" IsVisible="{Binding ImagesFailed}">
+        <TextBlock Text="{l:T Flash_NoImages}" TextWrapping="Wrap" />
+      </Border>
+
+      <CheckBox Content="{l:T Flash_ShowOlder}" IsChecked="{Binding ShowOlder}" IsVisible="{Binding !NeedTerms}" />
+
+      <!-- Official update or beta -->
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="h2" Text="{l:T Flash_OtaTitle}" />
+          <TextBlock Classes="muted" Text="{l:T Flash_OtaText}" TextWrapping="Wrap" />
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="accent" Content="{l:T Flash_OtaInstall}" Margin="10,0,0,0"
+                    Command="{Binding AskCommand}" CommandParameter="ota" IsEnabled="{Binding CanOta}" />
+            <ComboBox ItemsSource="{Binding OtaChoices}" SelectedItem="{Binding SelectedOta}" HorizontalAlignment="Stretch" />
+          </DockPanel>
+          <Button Classes="link" Content="{l:T Flash_UseFile}" Command="{Binding PickOtaCommand}" />
+          <Border Classes="warn" IsVisible="{Binding PendingOta}">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
+                <Button Content="{l:T Common_Cancel}" Command="{Binding CancelCommand}" />
+                <Button Classes="accent" Content="{l:T Flash_Confirm}" Command="{Binding ConfirmCommand}" />
+              </StackPanel>
+              <TextBlock Text="{Binding ConfirmText}" Foreground="{DynamicResource WarnFg}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </DockPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Factory image -->
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="h2" Text="{l:T Flash_FactoryTitle}" />
+          <TextBlock Classes="muted" Text="{l:T Flash_FactoryText}" TextWrapping="Wrap" />
+          <Border Classes="note" IsVisible="{Binding !IsUnlocked}">
+            <TextBlock Text="{l:T Flash_NeedsUnlock}" TextWrapping="Wrap" />
+          </Border>
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="accent" Content="{l:T Flash_FactoryFlash}" Margin="10,0,0,0"
+                    Command="{Binding AskCommand}" CommandParameter="factory" IsEnabled="{Binding CanFactory}" />
+            <ComboBox ItemsSource="{Binding FactoryChoices}" SelectedItem="{Binding SelectedFactory}" HorizontalAlignment="Stretch" />
+          </DockPanel>
+          <Button Classes="link" Content="{l:T Flash_UseFile}" Command="{Binding PickFactoryCommand}" />
+          <StackPanel Spacing="2">
+            <CheckBox Content="{l:T Flash_Wipe}" IsChecked="{Binding Wipe}" />
+            <TextBlock Classes="faint" Text="{l:T Flash_WipeNote}" TextWrapping="Wrap" Margin="28,0,0,0" />
+          </StackPanel>
+          <StackPanel Spacing="2">
+            <CheckBox Content="{l:T Flash_LockAfter}" IsChecked="{Binding LockAfter}" />
+            <TextBlock Classes="faint" Text="{l:T Flash_LockAfterNote}" TextWrapping="Wrap" Margin="28,0,0,0" />
+          </StackPanel>
+          <Border Classes="warn" IsVisible="{Binding PendingFactory}">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
+                <Button Content="{l:T Common_Cancel}" Command="{Binding CancelCommand}" />
+                <Button Classes="accent" Content="{l:T Flash_Confirm}" Command="{Binding ConfirmCommand}" />
+              </StackPanel>
+              <TextBlock Text="{Binding ConfirmText}" Foreground="{DynamicResource WarnFg}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </DockPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Bootloader lock -->
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="h2" Text="{l:T Flash_LockTitle}" />
+          <StackPanel Spacing="12" IsVisible="{Binding !IsUnlocked}">
+            <TextBlock Classes="muted" Text="{l:T Flash_UnlockText}" TextWrapping="Wrap" />
+            <Border Classes="note" IsVisible="{Binding OemOff}">
+              <TextBlock Text="{l:T Flash_OemOffText}" TextWrapping="Wrap" />
+            </Border>
+            <Button Content="{l:T Flash_Unlock}" Command="{Binding AskCommand}" CommandParameter="unlock" IsEnabled="{Binding CanUnlock}" />
+          </StackPanel>
+          <StackPanel Spacing="12" IsVisible="{Binding IsUnlocked}">
+            <TextBlock Classes="muted" Text="{l:T Flash_LockText}" TextWrapping="Wrap" />
+            <Border Classes="note" IsVisible="{Binding !CanLock}">
+              <TextBlock Text="{l:T Flash_LockBlocked}" TextWrapping="Wrap" />
+            </Border>
+            <Button Content="{l:T Flash_Lock}" Command="{Binding AskCommand}" CommandParameter="lock" IsEnabled="{Binding CanLock}" />
+          </StackPanel>
+          <Border Classes="warn" IsVisible="{Binding PendingLock}">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
+                <Button Content="{l:T Common_Cancel}" Command="{Binding CancelCommand}" />
+                <Button Classes="accent" Content="{l:T Flash_Confirm}" Command="{Binding ConfirmCommand}" />
+              </StackPanel>
+              <TextBlock Text="{Binding ConfirmText}" Foreground="{DynamicResource WarnFg}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </DockPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Custom images -->
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="h2" Text="{l:T Flash_CustomTitle}" />
+          <TextBlock Classes="muted" Text="{l:T Flash_CustomText}" TextWrapping="Wrap" />
+          <StackPanel Spacing="12" IsEnabled="{Binding CanCustom}">
+            <DockPanel>
+              <TextBlock Text="{l:T Flash_Partition}" VerticalAlignment="Center" Margin="0,0,12,0" />
+              <ComboBox ItemsSource="{Binding Partitions}" SelectedItem="{Binding Partition}" MinWidth="200" />
+            </DockPanel>
+            <WrapPanel>
+              <Button Content="{l:T Flash_PickImage}" Command="{Binding PickImageCommand}" Margin="0,0,12,0" />
+              <TextBlock Text="{Binding CustomFileText}" IsVisible="{Binding HasCustomFile}" VerticalAlignment="Center" />
+            </WrapPanel>
+            <CheckBox Content="{l:T Flash_BothSlots}" IsChecked="{Binding BothSlots}" />
+            <CheckBox Content="{l:T Flash_DisableVerity}" IsChecked="{Binding DisableVerity}" IsVisible="{Binding IsVbmeta}" />
+            <WrapPanel IsEnabled="{Binding HasCustomFile}">
+              <Button Content="{Binding FlashImageText}" Command="{Binding AskCommand}" CommandParameter="image" Margin="0,0,10,0" />
+              <Button Content="{l:T Flash_BootOnce}" Command="{Binding AskCommand}" CommandParameter="boot" />
+            </WrapPanel>
+            <Separator />
+            <WrapPanel>
+              <Button Content="{l:T Flash_PickZip}" Command="{Binding PickZipCommand}" Margin="0,0,12,0" />
+              <TextBlock Text="{Binding ZipFileText}" IsVisible="{Binding HasZipFile}" VerticalAlignment="Center" Margin="0,0,12,0" />
+              <Button Content="{l:T Flash_SideloadZip}" Command="{Binding AskCommand}" CommandParameter="zip" IsEnabled="{Binding HasZipFile}" />
+            </WrapPanel>
+          </StackPanel>
+          <Border Classes="warn" IsVisible="{Binding PendingCustom}">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
+                <Button Content="{l:T Common_Cancel}" Command="{Binding CancelCommand}" />
+                <Button Classes="accent" Content="{l:T Flash_Confirm}" Command="{Binding ConfirmCommand}" />
+              </StackPanel>
+              <TextBlock Text="{Binding ConfirmText}" Foreground="{DynamicResource WarnFg}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </DockPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

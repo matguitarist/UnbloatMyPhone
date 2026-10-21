@@ -14,13 +14,16 @@ public enum ConnectState { Idle, Connecting, WaitingForApproval, Reading, Failed
 public sealed class FoundPhone(string serial, string state, string name, bool wireless)
 {
     public string Serial { get; } = serial;
-    /// <summary>"device", "unauthorized", "offline", or "announced" (wireless debugging is on, not connected yet).</summary>
+    /// <summary>"device", "unauthorized", "offline", "announced" (wireless debugging is on, not connected yet) or "bootloader".</summary>
     public string State { get; } = state;
     public string Name { get; } = name;
     public bool IsWireless { get; } = wireless;
     public bool CanUse => State is "device" or "announced";
     public bool NeedsApproval => State == "unauthorized";
+    /// <summary>In bootloader mode: only Flash and repair can do anything with it.</summary>
+    public bool IsBootloader => State == "bootloader";
     public string Detail => Loc.Get(NeedsApproval ? "Connect_RowApprove" : State == "offline" ? "Connect_RowOffline"
+        : IsBootloader ? "Connect_RowBootloader"
         : IsWireless ? "Connect_RowWifi" : "Connect_RowUsb");
     public string Key => $"{Serial}|{State}|{Name}";
 }
@@ -109,6 +112,10 @@ public sealed partial class ConnectViewModel : PageViewModel
             if (!devices.Any(d => d.Serial == s.Address || d.Serial.StartsWith(s.Name + ".")))
                 rows.Add(new FoundPhone(s.Address, "announced", Loc.Get("Connect_WifiPhone"), wireless: true));
 
+        // A phone in bootloader mode, maybe because Android doesn't start any more.
+        foreach (var serial in await Fastboot.ListAsync(Main.Adb))
+            rows.Add(new FoundPhone(serial, "bootloader", serial, wireless: false));
+
         if (!rows.Select(r => r.Key).SequenceEqual(Phones.Select(p => p.Key)))
         {
             Phones.Clear();
@@ -124,6 +131,9 @@ public sealed partial class ConnectViewModel : PageViewModel
             if (PairAddress.Length == 0 || PairAddress == _autoPairAddress) PairAddress = _autoPairAddress = pairing.Address;
         }
     }
+
+    [RelayCommand]
+    private void OpenFlash(FoundPhone phone) => Main.GoFlash(phone.Serial);
 
     [RelayCommand]
     private Task UseAsync(FoundPhone phone) => ConnectToAsync(phone.Serial, connectFirst: phone.State == "announced");

@@ -95,6 +95,15 @@ public static class Catalog
         public List<OptionDef>? Options { get; set; }
         public List<WriteDef>? Writes { get; set; }
     }
+    /// <summary>One of Google's pages listing Pixel images (Flash and repair).</summary>
+    private sealed class ImagePageDef
+    {
+        public string Url { get; set; } = "";
+        /// <summary>"factory" or "ota".</summary>
+        public string Kind { get; set; } = "factory";
+        public bool Beta { get; set; }
+        public Text Name { get; set; } = new();
+    }
     private sealed class CatalogFile
     {
         public int Schema { get; set; }
@@ -104,6 +113,7 @@ public static class Catalog
         public List<SettingDef> Settings { get; set; } = [];
         public List<KeepDef> Keep { get; set; } = [];
         public List<NameDef> Names { get; set; } = [];
+        public List<ImagePageDef> ImagePages { get; set; } = [];
     }
 
     private static readonly JsonSerializerOptions Json = new()
@@ -150,6 +160,12 @@ public static class Catalog
     }
 
     public static int Version => _current.Version;
+
+    public sealed record ImagePage(string Url, bool IsOta, bool IsBeta, string Name);
+
+    /// <summary>Google's pages listing factory and OTA images, stable and beta.</summary>
+    public static List<ImagePage> ImagePages =>
+        _current.ImagePages.Select(p => new ImagePage(p.Url, p.Kind == "ota", p.Beta, L(p.Name).ToString())).ToList();
 
     private static DateTime _lastRefresh = DateTime.MinValue;
 

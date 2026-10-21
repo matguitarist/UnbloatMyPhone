@@ -67,7 +67,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         oldValue?.OnLeave();
         RefreshSteps();
-        foreach (var name in new[] { nameof(OnInfo), nameof(OnHealth), nameof(OnPrivacy), nameof(OnApps), nameof(OnInstall), nameof(OnRestore) })
+        foreach (var name in new[] { nameof(OnInfo), nameof(OnHealth), nameof(OnPrivacy), nameof(OnApps), nameof(OnInstall), nameof(OnRestore), nameof(OnFlash) })
             OnPropertyChanged(name);
     }
 
@@ -78,9 +78,10 @@ public sealed partial class MainViewModel : ObservableObject
     public bool OnApps => CurrentPage is AppsViewModel;
     public bool OnInstall => CurrentPage is InstallViewModel;
     public bool OnRestore => CurrentPage is RestoreViewModel;
+    public bool OnFlash => CurrentPage is FlashViewModel;
 
     /// <summary>Changes are being made to the phone: don't let the user leave the page.</summary>
-    public bool IsBusy => CurrentPage is ApplyViewModel { IsFinished: false } or RestoreViewModel { IsBusy: true };
+    public bool IsBusy => CurrentPage is ApplyViewModel { IsFinished: false } or RestoreViewModel { IsBusy: true } or FlashViewModel { IsRunning: true };
 
     public void RefreshSteps()
     {
@@ -89,7 +90,7 @@ public sealed partial class MainViewModel : ObservableObject
             s.IsActive = s.Number - 1 == CurrentPage.StepIndex;
             s.IsDone = s.Number - 1 < CurrentPage.StepIndex;
             // From a tool page (also step 3), "Choose" leads back to the list.
-            var onTool = CurrentPage is PhoneInfoViewModel or HealthViewModel or PrivacyViewModel or AppsViewModel or InstallViewModel or RestoreViewModel;
+            var onTool = CurrentPage is PhoneInfoViewModel or HealthViewModel or PrivacyViewModel or AppsViewModel or InstallViewModel or RestoreViewModel or FlashViewModel;
             s.CanNavigate = (s.IsDone || (s.Number == 3 && onTool)) && !IsBusy && s.Number < 4 && (s.Number != 3 || HasDevice);
         }
     }
@@ -173,8 +174,18 @@ public sealed partial class MainViewModel : ObservableObject
         if (Device is not null && !IsBusy) CurrentPage = new InstallViewModel(this, Device);
     }
 
+    [RelayCommand(CanExecute = nameof(HasDevice))]
+    private void GoFlash()
+    {
+        if (Device is not null && !IsBusy) CurrentPage = new FlashViewModel(this, Device.SerialNo, Device.DisplayName);
+    }
+
+    /// <summary>A phone that is only in bootloader mode (it may not start any more): no adb connection.</summary>
+    public void GoFlash(string serialNo) => CurrentPage = new FlashViewModel(this, serialNo, serialNo);
+
     partial void OnDeviceChanged(PhoneDevice? value)
     {
+        GoFlashCommand.NotifyCanExecuteChanged();
         GoRestoreCommand.NotifyCanExecuteChanged();
         GoInfoCommand.NotifyCanExecuteChanged();
         GoHealthCommand.NotifyCanExecuteChanged();

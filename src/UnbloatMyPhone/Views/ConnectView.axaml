@@ -74,6 +74,9 @@
                     <Button DockPanel.Dock="Right" Classes="accent" Content="{l:T Connect_UseThis}" VerticalAlignment="Center"
                             IsVisible="{Binding CanUse}"
                             Command="{Binding $parent[UserControl].DataContext.UseCommand}" CommandParameter="{Binding}" />
+                    <Button DockPanel.Dock="Right" Content="{l:T Connect_OpenFlash}" VerticalAlignment="Center"
+                            IsVisible="{Binding IsBootloader}"
+                            Command="{Binding $parent[UserControl].DataContext.OpenFlashCommand}" CommandParameter="{Binding}" />
                     <Border DockPanel.Dock="Left" Width="36" Height="36" CornerRadius="9" Background="{DynamicResource AccentSoft}" Margin="0,0,14,0">
                       <Path Stroke="{DynamicResource AccentFg}" StrokeThickness="1.7" StrokeLineCap="Round" StrokeJoin="Round"
                             Width="18" Height="18" Stretch="Uniform"

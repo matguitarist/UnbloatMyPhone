@@ -9,6 +9,8 @@ public sealed class AppSettings
     public bool CheckForUpdates { get; set; } = true;
     /// <summary>A version the user chose to skip; newer ones are still offered.</summary>
     public string? SkippedVersion { get; set; }
+    /// <summary>The user accepted Google's terms for Pixel images (Flash and repair).</summary>
+    public bool AcceptedImageTerms { get; set; }
 
     public static AppSettings Current { get; } = Load();
 

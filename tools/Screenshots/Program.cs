@@ -180,3 +180,21 @@ Shot("apps-dark-en", ThemeVariant.Dark, "en", m =>
         demoApps.ToDictionary(d => d.Pkg, d => new PhoneIcons.Entry(d.Label, Icon(d.Color, d.Label[..1]))));
     return a;
 }, 1000);
+
+// Flash and repair, with a made-up unlocked Pixel in bootloader mode (the page doesn't watch a real phone).
+Shot("flash-dark-en", ThemeVariant.Dark, "en", m =>
+{
+    var f = new FlashViewModel(m, "DEMO0000000000", "Google Pixel 9", watch: false)
+    {
+        Mode = PhoneMode.Bootloader, Codename = "tokay", Unlocked = true, OemAllowed = true, TermsAccepted = true,
+    };
+    var stable = new PixelImage(false, false, "CP3A.261005.005", "17.0.0 (CP3A.261005.005, Oct 2026)", "https://dl.google.com/x/tokay-cp3a.261005.005-factory-e44505ee.zip", new string('0', 64));
+    var ota = stable with { IsOta = true, Url = "https://dl.google.com/x/tokay-ota-cp3a.261005.005-12345678.zip" };
+    var beta = new PixelImage(true, true, "DP11.261002.005", "Android 17 QPR3 Beta (DP11.261002.005)", "https://dl.google.com/x/tokay_beta-ota-dp11.261002.005-1.zip", new string('0', 64));
+    f.OtaChoices.Add(new ImageChoice(ota, null, ota.Label));
+    f.OtaChoices.Add(new ImageChoice(beta, null, beta.Label + " · beta"));
+    f.FactoryChoices.Add(new ImageChoice(stable, null, stable.Label));
+    f.SelectedOta = f.OtaChoices[0];
+    f.SelectedFactory = f.FactoryChoices[0];
+    return f;
+}, 2400);

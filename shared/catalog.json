@@ -1,7 +1,17 @@
 {
   "// schema": "Bump 'version' on every change: apps download this file from GitHub and use it when it is newer than their own copy. Bump 'schema' only for changes older apps can't read.",
   "schema": 1,
-  "version": 9,
+  "version": 10,
+  "imagePages": [
+    { "url": "https://developers.google.com/android/images", "kind": "factory", "beta": false,
+      "name": { "en": "Android", "fr": "Android" } },
+    { "url": "https://developers.google.com/android/ota", "kind": "ota", "beta": false,
+      "name": { "en": "Android", "fr": "Android" } },
+    { "url": "https://developer.android.com/about/versions/17/qpr3/download", "kind": "factory", "beta": true,
+      "name": { "en": "Android 17 QPR3 Beta", "fr": "Android 17 QPR3 bêta" } },
+    { "url": "https://developer.android.com/about/versions/17/qpr3/download-ota", "kind": "ota", "beta": true,
+      "name": { "en": "Android 17 QPR3 Beta", "fr": "Android 17 QPR3 bêta" } }
+  ],
   "groups": [
     { "id": "telemetry", "title": { "en": "Tracking and diagnostics", "fr": "Pistage et diagnostics" },
       "description": { "en": "Background services that report how the phone is used, or collect logs for support. Nothing you use day to day depends on them.", "fr": "Services en arrière-plan qui signalent l'utilisation du téléphone ou collectent des journaux pour l'assistance. Rien de ce que vous utilisez au quotidien n'en dépend." } },

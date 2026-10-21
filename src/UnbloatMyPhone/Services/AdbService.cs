@@ -27,6 +27,8 @@ public sealed class AdbService
 
     public string ToolsDir => Path.Combine(DataDir, "platform-tools");
     public string AdbPath => Path.Combine(ToolsDir, OperatingSystem.IsWindows() ? "adb.exe" : "adb");
+    /// <summary>Comes in the same platform-tools download as adb.</summary>
+    public string FastbootPath => Path.Combine(ToolsDir, OperatingSystem.IsWindows() ? "fastboot.exe" : "fastboot");
     public bool IsInstalled => File.Exists(AdbPath);
 
     private bool _serverStarted;
@@ -75,7 +77,8 @@ public sealed class AdbService
         File.Delete(zip);
 
         if (!OperatingSystem.IsWindows())
-            File.SetUnixFileMode(AdbPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            foreach (var exe in new[] { AdbPath, FastbootPath })
+                if (File.Exists(exe)) File.SetUnixFileMode(exe, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 
         progress?.Report(1);
     }
@@ -125,6 +128,62 @@ public sealed class AdbService
             return new AdbResult(-1, "", "timeout");
         }
         return new AdbResult(p.ExitCode, (await stdout).Replace("\r", ""), (await stderr).Replace("\r", ""));
+    }
+
+    /// <summary>
+    /// Run adb or fastboot for a long job (flashing, sideload), passing each line of output as it comes:
+    /// progress lines end in "\r", so those count as lines too.
+    /// </summary>
+    public async Task<AdbResult> RunStreamingAsync(string exe, IEnumerable<string> args, Action<string> onLine, int timeoutMs, CancellationToken ct)
+    {
+        if (exe == AdbPath) await StartServerAsync();
+        var psi = new ProcessStartInfo(exe)
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardOutputEncoding = System.Text.Encoding.UTF8,
+            StandardErrorEncoding = System.Text.Encoding.UTF8,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        foreach (var a in args) psi.ArgumentList.Add(a);
+
+        using var p = Process.Start(psi)!;
+        var all = new System.Text.StringBuilder();
+        void Add(string text)
+        {
+            lock (all) all.AppendLine(text);
+            onLine(text);
+        }
+        async Task Pump(StreamReader r)
+        {
+            var line = new System.Text.StringBuilder();
+            var buf = new char[1024];
+            int n;
+            while ((n = await r.ReadAsync(buf)) > 0)
+                for (var i = 0; i < n; i++)
+                {
+                    if (buf[i] is not ('\n' or '\r')) { line.Append(buf[i]); continue; }
+                    if (line.Length == 0) continue;
+                    Add(line.ToString());
+                    line.Clear();
+                }
+            if (line.Length > 0) Add(line.ToString());
+        }
+        var pumps = Task.WhenAll(Pump(p.StandardOutput), Pump(p.StandardError));
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(timeoutMs);
+        try
+        {
+            await p.WaitForExitAsync(cts.Token);
+            await pumps;
+        }
+        catch (OperationCanceledException)
+        {
+            try { p.Kill(true); } catch { }
+            return new AdbResult(-1, all.ToString(), ct.IsCancellationRequested ? "cancelled" : "timeout");
+        }
+        return new AdbResult(p.ExitCode, all.ToString(), "");
     }
 
     public Task<AdbResult> ShellAsync(string serial, string command, int timeoutMs = 20000) =>
