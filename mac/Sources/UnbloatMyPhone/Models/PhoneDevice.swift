@@ -126,7 +126,7 @@ struct PhoneDevice: Sendable {
     }
 
     private static func listPackages(_ adb: Adb, serial: String, flag: String) async -> Set<String> {
-        let r = await adb.shell(serial, "pm list packages \(flag)", timeout: 30)
+        let r = await adb.shell(serial, "pm list packages --user 0 \(flag)", timeout: 30)
         return Set(r.output.components(separatedBy: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { $0.hasPrefix("package:") }

@@ -105,7 +105,7 @@ public sealed class SettingsTweak : Tweak
         // The chosen option needs an app that was turned off (e.g. Google Ambient): turn it back on.
         foreach (var pkg in KeptPackages.Where(ctx.Device.Disabled.Contains))
         {
-            await ctx.Adb.ShellAsync(ctx.Serial, $"pm enable {pkg}");
+            await ctx.Adb.ShellAsync(ctx.Serial, $"pm enable --user 0 {pkg}");
             ctx.Backup.EnabledPackages.Add(pkg);
             ctx.Backup.Save();
         }

@@ -97,7 +97,11 @@ public sealed partial class ConnectViewModel : PageViewModel
         var devices = await Main.Adb.ListDevicesAsync();
         var services = await Main.Adb.MdnsServicesAsync();
 
+        // A phone reached both by address and by its announced name is one phone: keep the name.
+        var twice = services.Where(s => !s.Pairing && devices.Any(d => d.Serial.StartsWith(s.Name + ".")))
+            .Select(s => s.Address).ToHashSet();
         var rows = devices
+            .Where(d => !twice.Contains(d.Serial))
             .Select(d => new FoundPhone(d.Serial, d.State, d.Model.Length > 0 ? d.Model : d.Serial, AdbService.IsWirelessSerial(d.Serial)))
             .ToList();
         // Paired phones with wireless debugging on that adb hasn't connected to yet.

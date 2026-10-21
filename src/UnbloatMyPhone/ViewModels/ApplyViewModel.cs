@@ -185,8 +185,8 @@ public sealed partial class ApplyViewModel(MainViewModel main, PhoneDevice devic
         var parts = new List<string>();
         foreach (var (title, cmd) in new[]
                  {
-                     ("packages (all)", "pm list packages -f"),
-                     ("packages (disabled)", "pm list packages -d"),
+                     ("packages (all)", "pm list packages --user 0 -f"),
+                     ("packages (disabled)", "pm list packages --user 0 -d"),
                      ("settings global", "settings list global"),
                      ("settings secure", "settings list secure"),
                      ("settings system", "settings list system"),

@@ -57,7 +57,7 @@ public sealed partial class RestoreViewModel : PageViewModel
             var adb = Main.Adb;
             var serial = Device.Serial;
             foreach (var pkg in b.DisabledPackages)
-                await adb.ShellAsync(serial, $"pm enable {pkg}");
+                await adb.ShellAsync(serial, $"pm enable --user 0 {pkg}");
             foreach (var s in Enumerable.Reverse(b.Settings))
                 await SettingsIO.RestoreAsync(adb, serial, s.Namespace, s.Key, s.OldValue);
             foreach (var pkg in b.EnabledPackages)
@@ -83,7 +83,7 @@ public sealed partial class RestoreViewModel : PageViewModel
                 // enabled=3 is COMPONENT_ENABLED_STATE_DISABLED_USER, i.e. disabled by someone, not by the firmware.
                 var state = await adb.ShellAsync(serial, $"dumpsys package {pkg} | grep -m1 -oE 'enabled=[0-9]'");
                 if (!state.Output.Contains("enabled=3")) continue;
-                await adb.ShellAsync(serial, $"pm enable {pkg}");
+                await adb.ShellAsync(serial, $"pm enable --user 0 {pkg}");
                 count++;
             }
             return Loc.Format("Restore_AllDone", count);

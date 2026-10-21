@@ -113,7 +113,7 @@ final class Tweak: Identifiable {
         case .settings(let writes):
             // The chosen option needs an app that was turned off (e.g. Google Ambient): turn it back on.
             for pkg in keptPackages where ctx.device.disabled.contains(pkg) {
-                _ = await ctx.adb.shell(ctx.serial, "pm enable \(pkg)")
+                _ = await ctx.adb.shell(ctx.serial, "pm enable --user 0 \(pkg)")
                 ctx.backup.enabledPackages.append(pkg)
                 try? ctx.backup.save()
             }

@@ -145,7 +145,7 @@ public sealed class PhoneDevice
 
     private static async Task<HashSet<string>> ListPackagesAsync(AdbService adb, string serial, string flag)
     {
-        var r = await adb.ShellAsync(serial, $"pm list packages {flag}", 30000);
+        var r = await adb.ShellAsync(serial, $"pm list packages --user 0 {flag}", 30000);
         return r.Output.Split('\n')
             .Select(l => l.Trim())
             .Where(l => l.StartsWith("package:"))

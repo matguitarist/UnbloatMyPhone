@@ -209,7 +209,9 @@ final class ConnectModel {
         let adb = Adb.shared
         let devices = await adb.devices()
         let services = await adb.mdnsServices()
-        var rows = devices.map {
+        // A phone reached both by address and by its announced name is one phone: keep the name.
+        let twice = Set(services.filter { s in !s.pairing && devices.contains { $0.serial.hasPrefix(s.name + ".") } }.map(\.address))
+        var rows = devices.filter { !twice.contains($0.serial) }.map {
             FoundPhone(serial: $0.serial, state: $0.state, name: $0.model.isEmpty ? $0.serial : $0.model, isWireless: Adb.isWireless($0.serial))
         }
         // Paired phones with wireless debugging on that adb hasn't connected to yet.
@@ -588,7 +590,7 @@ final class ApplyModel {
     private func saveSnapshot(_ backup: Backup) async {
         guard let adb = app?.adb else { return }
         var parts: [String] = []
-        for (title, cmd) in [("packages (all)", "pm list packages -f"), ("packages (disabled)", "pm list packages -d"),
+        for (title, cmd) in [("packages (all)", "pm list packages --user 0 -f"), ("packages (disabled)", "pm list packages --user 0 -d"),
                              ("settings global", "settings list global"), ("settings secure", "settings list secure"),
                              ("settings system", "settings list system")] {
             let r = await adb.shell(device.serial, cmd, timeout: 30)
@@ -691,7 +693,7 @@ final class RestoreModel {
     /// Undo one run: re-enable its apps and put every setting back as it was.
     func restore(_ b: Backup) async {
         await runBusy { adb, serial in
-            for pkg in b.disabledPackages { _ = await adb.shell(serial, "pm enable \(pkg)") }
+            for pkg in b.disabledPackages { _ = await adb.shell(serial, "pm enable --user 0 \(pkg)") }
             for s in b.settings.reversed() { await SettingsIO.restore(adb, serial, s.namespace, s.key, s.oldValue) }
             for pkg in b.enabledPackages { _ = await adb.shell(serial, "pm disable-user --user 0 \(pkg)") }
             // Keep the file for reference, but stop offering it.
@@ -712,7 +714,7 @@ final class RestoreModel {
                 // enabled=3 is COMPONENT_ENABLED_STATE_DISABLED_USER, i.e. disabled by someone, not by the firmware.
                 let state = await adb.shell(serial, "dumpsys package \(pkg) | grep -m1 -oE 'enabled=[0-9]'")
                 guard state.output.contains("enabled=3") else { continue }
-                _ = await adb.shell(serial, "pm enable \(pkg)")
+                _ = await adb.shell(serial, "pm enable --user 0 \(pkg)")
                 count += 1
             }
             return L("Restore_AllDone", count)
