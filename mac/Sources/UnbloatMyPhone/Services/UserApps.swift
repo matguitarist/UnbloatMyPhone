@@ -16,6 +16,8 @@ struct InstalledApp {
 
     var totalBytes: Int64 { appBytes + dataBytes + cacheBytes }
     var fromPlay: Bool { installer == "com.android.vending" }
+    /// A website added to the home screen. Chrome's ("WebAPKs") are made by Google Play and show no installer.
+    var isWebApp: Bool { installer == "com.android.chrome" || package.hasPrefix("org.chromium.webapk.") }
 }
 
 /// The apps installed by the phone's owner (not the work profile), and what can be done with them. Same rules as the Windows app.

@@ -7,17 +7,13 @@ import Observation
 final class AppRow: Identifiable {
     var app: InstalledApp
     var name: String
-    /// What the user is typing in "Name this app".
-    var nameDraft = ""
     /// The icon as the phone draws it; nil until it arrives, or when the phone can't give one.
     var icon: NSImage?
-    /// The name under its icon on the phone, when the phone gave one: it wins over the catalog and the user's names.
-    private var phoneLabel = ""
     let isProtected: Bool
     /// "Apps_Uninstalled" or "Apps_Archived" once done; the row stays until the next refresh.
     var goneKey = ""
     var isWorking = false
-    /// "", "uninstall", "archive" (waiting for a yes) or "name" (typing a name).
+    /// "", "uninstall" or "archive" (waiting for a yes).
     var pending = ""
     nonisolated let id: String
     var package: String { app.package }
@@ -31,17 +27,17 @@ final class AppRow: Identifiable {
 
     var isGone: Bool { !goneKey.isEmpty }
     var hasFriendlyName: Bool { name != package }
-    var canName: Bool { phoneLabel.isEmpty }
 
+    /// The name under its icon on the phone wins over the catalog's.
     func setFromPhone(_ e: PhoneIcons.Entry) {
-        phoneLabel = e.label == package ? "" : e.label
-        name = resolveName()
+        if !e.label.isEmpty && e.label != package { name = e.label }
         if icon == nil, let png = e.png { icon = NSImage(data: png) }
     }
 
-    func resolveName() -> String { phoneLabel.isEmpty ? Catalog.name(of: package) ?? package : phoneLabel }
     var isConfirming: Bool { pending == "uninstall" || pending == "archive" }
     var isOff: Bool { !app.isEnabled && !isGone }
+    /// From a file or another store, not from Google Play or as a web app.
+    var isOutside: Bool { !isGone && !app.fromPlay && !app.isWebApp }
     private var ready: Bool { !isGone && !isWorking }
     var canOpen: Bool { ready && app.isEnabled && app.hasIcon }
     var canStop: Bool { ready && app.isEnabled }
@@ -62,7 +58,7 @@ final class AppRow: Identifiable {
         var parts: [String] = []
         if !app.version.isEmpty { parts.append(L("Apps_Version", app.version)) }
         if app.totalBytes > 0 { parts.append(Self.size(app.totalBytes)) }
-        parts.append(Self.origin(app.installer))
+        parts.append(Self.origin(app))
         if let d = app.installed {
             let f = DateFormatter()
             f.locale = Lang.locale
@@ -79,17 +75,17 @@ final class AppRow: Identifiable {
         return L("Apps_Gb", ChooseModel.oneDecimal(mb / 1024))
     }
 
-    static func origin(_ installer: String) -> String {
-        switch installer {
+    static func origin(_ app: InstalledApp) -> String {
+        if app.isWebApp { return L("Apps_FromWeb") }
+        return switch app.installer {
         case "com.android.vending": "Google Play"
-        case "com.android.chrome": L("Apps_FromWeb")
         case "", "com.android.shell", "com.google.android.packageinstaller", "com.android.packageinstaller": L("Apps_FromFile")
         case "org.fdroid.fdroid", "org.fdroid.basic": "F-Droid"
         case "com.aurora.store": "Aurora Store"
         case "com.amazon.venezia": "Amazon Appstore"
         case "com.sec.android.app.samsungapps": "Galaxy Store"
         case "dev.imranr.obtainium": "Obtainium"
-        default: installer
+        default: app.installer
         }
     }
 }
@@ -107,6 +103,8 @@ final class AppsModel {
     var statusIsError = false
     var search = ""
     var sort = Sort.name
+    /// The list shows only the apps that didn't come from Google Play.
+    var onlyOutside = false
     /// One backup per visit, started on the first app turned off or on.
     private var backup: Backup?
 
@@ -121,71 +119,24 @@ final class AppsModel {
 
     var present: [AppRow] { rows.filter { !$0.isGone } }
 
-    /// Bumped when a name is saved, so the "Help name apps" card updates.
-    private(set) var namesVersion = 0
-    var showNames = false
-
-    /// What "Help name apps" shares and copies: the names typed here that the catalog lacks ("package = Name"),
-    /// then the apps on this phone that still show only their technical name.
-    var nameLines: (named: [String], unnamed: [String]) {
-        _ = namesVersion
-        return (LocalNames.notInCatalog().map { "\($0.package) = \($0.name)" },
-                present.filter { !$0.hasFriendlyName }.map(\.package).sorted())
-    }
-
-    var nameList: String { let l = nameLines; return (l.named + l.unnamed).joined(separator: "\n") }
-
-    var nameHelpText: String {
-        let l = nameLines
-        var parts: [String] = []
-        if !l.unnamed.isEmpty { parts.append(L("Apps_Unnamed", l.unnamed.count)) }
-        if !l.named.isEmpty { parts.append(L("Apps_HelpNamed", l.named.count)) }
-        parts.append(L("Apps_HelpShare"))
-        return parts.joined(separator: " ")
-    }
-
-    func askName(_ row: AppRow) {
-        row.nameDraft = row.hasFriendlyName ? row.name : ""
-        row.pending = "name"
-    }
-
-    func saveName(_ row: AppRow) {
-        LocalNames.set(row.package, row.nameDraft)
-        row.name = row.resolveName()
-        row.pending = ""
-        namesVersion += 1
-    }
-
-    /// Open a pre-filled GitHub issue with the list. Nothing is posted until the user submits it there.
-    func shareNames() {
-        let l = nameLines
-        guard !(l.named.isEmpty && l.unnamed.isEmpty) else { return }
-        let (url, complete) = IssueReport.buildNames(l.named + l.unnamed)
-        if !complete { copy(nameList) }
-        NSWorkspace.shared.open(url)
-    }
-
-    func copyNames() {
-        copy(nameList)
-        statusIsError = false
-        status = L("Apps_Copied")
-    }
-
-    private func copy(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-    }
     var summary: String { L("Apps_Summary", present.count, AppRow.size(present.reduce(0) { $0 + $1.app.totalBytes })) }
 
-    /// Apps that came from a file or another store, not from Google Play or as a web app.
-    var outsideText: String {
-        let n = present.filter { !$0.app.fromPlay && $0.app.installer != "com.android.chrome" }.count
-        return n == 0 ? "" : L("Apps_Outside", n)
+    var outside: [AppRow] {
+        rows.filter(\.isOutside).sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// "• Name · installed from a file", one line per app, by name.
+    var outsideList: String {
+        outside.map { "• \($0.name) · \(AppRow.origin($0.app))" }.joined(separator: "\n")
     }
 
     var visible: [AppRow] {
         let q = search.trimmingCharacters(in: .whitespaces)
-        let found = q.isEmpty ? rows : rows.filter { $0.name.localizedCaseInsensitiveContains(q) || $0.package.localizedCaseInsensitiveContains(q) }
+        let onlyOutside = onlyOutside && rows.contains(where: \.isOutside)
+        let found = rows.filter {
+            (!onlyOutside || $0.isOutside)
+                && (q.isEmpty || $0.name.localizedCaseInsensitiveContains(q) || $0.package.localizedCaseInsensitiveContains(q))
+        }
         switch sort {
         case .name: return found.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         case .size: return found.sorted { $0.app.totalBytes > $1.app.totalBytes }

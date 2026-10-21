@@ -1,6 +1,4 @@
 using System.Collections.ObjectModel;
-using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using UnbloatMyPhone.Localization;
 using UnbloatMyPhone.Models;
@@ -31,32 +29,26 @@ public sealed partial class AppRow : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasFriendlyName))]
     private string _name;
 
-    /// <summary>What the user is typing in "Name this app".</summary>
-    [ObservableProperty] private string _nameDraft = "";
     /// <summary>The icon as the phone draws it; null until it arrives, or when the phone can't give one.</summary>
     [ObservableProperty] private Bitmap? _icon;
-    /// <summary>The name under its icon on the phone, when the phone gave one: it wins over the catalog and the user's names.</summary>
-    private string _phoneLabel = "";
     public string Package => App.Package;
     public bool HasFriendlyName => Name != Package;
-    public bool CanName => _phoneLabel.Length == 0;
 
+    /// <summary>The name under its icon on the phone wins over the catalog's.</summary>
     public void SetFromPhone(PhoneIcons.Entry e)
     {
-        _phoneLabel = e.Label == Package ? "" : e.Label;
-        Name = ResolveName();
-        OnPropertyChanged(nameof(CanName));
+        if (e.Label.Length > 0 && e.Label != Package) Name = e.Label;
         if (e.Png is { } png && Icon is null)
             try { Icon = new Bitmap(new MemoryStream(png)); } catch { }
     }
-
-    private string ResolveName() => _phoneLabel.Length > 0 ? _phoneLabel : Catalog.NameOf(Package) ?? Package;
     public bool IsProtected { get; }
     public bool IsOff => !App.IsEnabled && !IsGone;
+    /// <summary>From a file or another store, not from Google Play or as a web app.</summary>
+    public bool IsOutside => !IsGone && !App.FromPlay && !App.IsWebApp;
 
     /// <summary>"Uninstalled" or "Archived" once done; the row stays until the next refresh.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(GoneText), nameof(IsGone), nameof(IsPresent), nameof(IsOff), nameof(CanOpen), nameof(CanTurnOff), nameof(CanTurnOn),
+    [NotifyPropertyChangedFor(nameof(GoneText), nameof(IsGone), nameof(IsPresent), nameof(IsOff), nameof(IsOutside), nameof(CanOpen), nameof(CanTurnOff), nameof(CanTurnOn),
         nameof(CanStop), nameof(CanRemove), nameof(CanArchive))]
     private string _goneKey = "";
 
@@ -64,9 +56,9 @@ public sealed partial class AppRow : ObservableObject
     [NotifyPropertyChangedFor(nameof(CanOpen), nameof(CanTurnOff), nameof(CanTurnOn), nameof(CanStop), nameof(CanRemove), nameof(CanArchive))]
     private bool _isWorking;
 
-    /// <summary>"", "uninstall", "archive" (waiting for a yes) or "name" (typing a name).</summary>
+    /// <summary>"", "uninstall" or "archive" (waiting for a yes).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasPending), nameof(IsNaming), nameof(ConfirmText), nameof(ConfirmButton))]
+    [NotifyPropertyChangedFor(nameof(HasPending), nameof(ConfirmText), nameof(ConfirmButton))]
     private string _pending = "";
 
     public string GoneText => IsGone ? Loc.Get(GoneKey) : "";
@@ -80,7 +72,6 @@ public sealed partial class AppRow : ObservableObject
     public bool CanRemove => Ready && !IsProtected;
     public bool CanArchive => CanRemove && _page.ArchiveSupported && App.FromPlay;
     public bool HasPending => Pending is "uninstall" or "archive";
-    public bool IsNaming => Pending == "name";
 
     public string ConfirmText => Pending switch
     {
@@ -98,7 +89,7 @@ public sealed partial class AppRow : ObservableObject
             var parts = new List<string>();
             if (App.Version.Length > 0) parts.Add(Loc.Format("Apps_Version", App.Version));
             if (App.TotalBytes > 0) parts.Add(Size(App.TotalBytes));
-            parts.Add(Origin(App.Installer));
+            parts.Add(Origin(App));
             if (App.Installed is { } d) parts.Add(Loc.Format("Apps_InstalledOn", d.ToString("d MMM yyyy", Loc.Culture)));
             return string.Join(" · ", parts);
         }
@@ -112,17 +103,16 @@ public sealed partial class AppRow : ObservableObject
             : Loc.Format("Apps_Gb", (mb / 1024).ToString("0.0", Loc.Culture));
     }
 
-    public static string Origin(string installer) => installer switch
+    public static string Origin(InstalledApp app) => app.IsWebApp ? Loc.Get("Apps_FromWeb") : app.Installer switch
     {
         "com.android.vending" => "Google Play",
-        "com.android.chrome" => Loc.Get("Apps_FromWeb"),
         "" or "com.android.shell" or "com.google.android.packageinstaller" or "com.android.packageinstaller" => Loc.Get("Apps_FromFile"),
         "org.fdroid.fdroid" or "org.fdroid.basic" => "F-Droid",
         "com.aurora.store" => "Aurora Store",
         "com.amazon.venezia" => "Amazon Appstore",
         "com.sec.android.app.samsungapps" => "Galaxy Store",
         "dev.imranr.obtainium" => "Obtainium",
-        _ => installer,
+        _ => app.Installer,
     };
 
     public void Refresh()
@@ -138,22 +128,6 @@ public sealed partial class AppRow : ObservableObject
     [RelayCommand] private void AskUninstall() => Pending = "uninstall";
     [RelayCommand] private void AskArchive() => Pending = "archive";
     [RelayCommand] private void Cancel() => Pending = "";
-
-    [RelayCommand]
-    private void AskName()
-    {
-        NameDraft = HasFriendlyName ? Name : "";
-        Pending = "name";
-    }
-
-    [RelayCommand]
-    private void SaveName()
-    {
-        LocalNames.Set(Package, NameDraft);
-        Name = ResolveName();
-        Pending = "";
-        _page.NamesChanged();
-    }
     [RelayCommand] private Task ConfirmAsync() => _page.RemoveAsync(this);
 }
 
@@ -180,42 +154,19 @@ public sealed partial class AppsViewModel : PageViewModel
     public bool IsEmpty => !IsLoading && Error.Length == 0 && _all.Count == 0;
     public bool NoMatch => _all.Count > 0 && Rows.Count == 0;
     public string Summary => Loc.Format("Apps_Summary", _all.Count(r => !r.IsGone), AppRow.Size(_all.Where(r => !r.IsGone).Sum(r => r.App.TotalBytes)));
-    /// <summary>
-    /// What "Help name apps" shares and copies: the names typed here that the catalog lacks ("package = Name"),
-    /// then the apps on this phone that still show only their technical name.
-    /// </summary>
-    private List<string> _nameLines = [];
-    private int _namedCount, _unnamedCount;
-    public bool HasNameHelp => _nameLines.Count > 0;
-    public string NameList => string.Join("\n", _nameLines);
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowNamesText))]
-    private bool _showNames;
-    public string ShowNamesText => ShowNames ? Loc.Get("Apps_HelpHide") : Loc.Format("Apps_HelpShow", _nameLines.Count);
-
-    public string NameHelpText
-    {
-        get
-        {
-            var parts = new List<string>();
-            if (_unnamedCount > 0) parts.Add(Loc.Format("Apps_Unnamed", _unnamedCount));
-            if (_namedCount > 0) parts.Add(Loc.Format("Apps_HelpNamed", _namedCount));
-            parts.Add(Loc.Get("Apps_HelpShare"));
-            return string.Join(" ", parts);
-        }
-    }
-
     public string[] SortOptions => [Loc.Get("Apps_SortName"), Loc.Get("Apps_SortSize"), Loc.Get("Apps_SortNewest")];
 
-    /// <summary>Apps that came from a file or another store, not from Google Play or as a web app.</summary>
-    public string OutsideText
-    {
-        get
-        {
-            var n = _all.Count(r => !r.IsGone && !r.App.FromPlay && r.App.Installer != "com.android.chrome");
-            return n == 0 ? "" : Loc.Format("Apps_Outside", n);
-        }
-    }
+    private IEnumerable<AppRow> Outside => _all.Where(r => r.IsOutside);
+    public bool HasOutside => Outside.Any();
+    public string OutsideText => Loc.Format("Apps_Outside", Outside.Count());
+    /// <summary>"• Name · installed from a file", one line per app, by name.</summary>
+    public string OutsideList => string.Join("\n", Outside.OrderBy(r => r.Name, StringComparer.Create(Loc.Culture, true))
+        .Select(r => $"• {r.Name} · {AppRow.Origin(r.App)}"));
+    /// <summary>The list shows only the apps that didn't come from Google Play.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OnlyOutsideText))]
+    private bool _onlyOutside;
+    public string OnlyOutsideText => Loc.Get(OnlyOutside ? "Apps_ShowAll" : "Apps_ShowOutside");
 
     /// <summary>One backup per visit, started on the first app turned off or on.</summary>
     private Backup? _backup;
@@ -228,11 +179,14 @@ public sealed partial class AppsViewModel : PageViewModel
 
     partial void OnSearchChanged(string value) => Filter();
     partial void OnSortIndexChanged(int value) => Filter();
+    partial void OnOnlyOutsideChanged(bool value) => Filter();
+    [RelayCommand] private void ToggleOutside() => OnlyOutside = !OnlyOutside;
 
     public override void OnLanguageChanged()
     {
         var sort = SortIndex;
         OnPropertyChanged(nameof(SortOptions));
+        OnPropertyChanged(nameof(OnlyOutsideText));
         SortIndex = sort;
         foreach (var r in _all) r.Refresh();
         Counts();
@@ -271,7 +225,7 @@ public sealed partial class AppsViewModel : PageViewModel
         if (rows != _all || found.Count == 0) return;  // refreshed meanwhile
         foreach (var r in rows)
             if (found.TryGetValue(r.Package, out var e)) r.SetFromPhone(e);
-        // Re-sort by the real names, unless someone is in the middle of something on a row.
+        // Re-sort by the real names, unless someone is waiting on a yes on a row.
         if (SortIndex == 0 && rows.All(r => r.Pending.Length == 0)) Filter();
         else Counts();
     }
@@ -287,8 +241,8 @@ public sealed partial class AppsViewModel : PageViewModel
     private void Filter()
     {
         var q = Search.Trim();
-        IEnumerable<AppRow> rows = _all.Where(r => q.Length == 0
-            || r.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || r.Package.Contains(q, StringComparison.OrdinalIgnoreCase));
+        IEnumerable<AppRow> rows = _all.Where(r => (!OnlyOutside || r.IsOutside) && (q.Length == 0
+            || r.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || r.Package.Contains(q, StringComparison.OrdinalIgnoreCase)));
         rows = SortIndex switch
         {
             1 => rows.OrderByDescending(r => r.App.TotalBytes),
@@ -302,46 +256,9 @@ public sealed partial class AppsViewModel : PageViewModel
 
     private void Counts()
     {
-        var named = LocalNames.NotInCatalog();
-        var unnamed = _all.Where(r => !r.IsGone && !r.HasFriendlyName).Select(r => r.Package).Order().ToList();
-        _namedCount = named.Count;
-        _unnamedCount = unnamed.Count;
-        _nameLines = [.. named.Select(n => $"{n.Key} = {n.Value}"), .. unnamed];
-        foreach (var name in new[] { nameof(IsEmpty), nameof(NoMatch), nameof(Summary), nameof(OutsideText),
-                     nameof(HasNameHelp), nameof(NameList), nameof(NameHelpText), nameof(ShowNamesText) }) OnPropertyChanged(name);
-    }
-
-    /// <summary>The row keeps its place until the next refresh, so it doesn't jump away while you look at it.</summary>
-    public void NamesChanged() => Counts();
-
-    [RelayCommand] private void ToggleNames() => ShowNames = !ShowNames;
-
-    /// <summary>Open a pre-filled GitHub issue with the list. Nothing is posted until the user submits it there.</summary>
-    [RelayCommand]
-    private async Task ShareNamesAsync()
-    {
-        if (_nameLines.Count == 0) return;
-        var (url, complete) = IssueReport.BuildNames(_nameLines);
-        if (!complete) await CopyAsync(NameList);
-        UpdateService.OpenInBrowser(url);
-    }
-
-    [RelayCommand]
-    private async Task CopyNamesAsync()
-    {
-        if (await CopyAsync(NameList))
-        {
-            StatusIsError = false;
-            Status = Loc.Get("Apps_Copied");
-        }
-    }
-
-    private static async Task<bool> CopyAsync(string text)
-    {
-        if ((Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.Clipboard is not { } clipboard)
-            return false;
-        await clipboard.SetTextAsync(text);
-        return true;
+        if (OnlyOutside && !HasOutside) OnlyOutside = false;
+        foreach (var name in new[] { nameof(IsEmpty), nameof(NoMatch), nameof(Summary), nameof(HasOutside), nameof(OutsideText), nameof(OutsideList) })
+            OnPropertyChanged(name);
     }
 
     private void Report(string? error, string okKey, AppRow row)

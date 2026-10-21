@@ -20,6 +20,8 @@ public sealed record InstalledApp(
 {
     public long TotalBytes => AppBytes + DataBytes + CacheBytes;
     public bool FromPlay => Installer == "com.android.vending";
+    /// <summary>A website added to the home screen. Chrome's ("WebAPKs") are made by Google Play and show no installer.</summary>
+    public bool IsWebApp => Installer == "com.android.chrome" || Package.StartsWith("org.chromium.webapk.");
 }
 
 /// <summary>The apps installed by the phone's owner (not the work profile), and what can be done with them.</summary>

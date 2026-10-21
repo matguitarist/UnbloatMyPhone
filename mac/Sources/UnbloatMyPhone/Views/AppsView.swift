@@ -6,36 +6,21 @@ struct AppsView: View {
     var body: some View {
         PageLayout(title: L("Apps_Title"), subtitle: L("Apps_Lead")) {
             Note(text: L("Apps_Note"))
-            if !apps.outsideText.isEmpty { Note(text: apps.outsideText, kind: .warning) }
-            let lines = apps.nameLines
-            if !lines.named.isEmpty || !lines.unnamed.isEmpty {
-                Card {
-                    HStack(alignment: .top, spacing: 14) {
-                        Image(systemName: "questionmark.app").font(.title2).foregroundStyle(.tint).frame(width: 40)
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(L("Apps_HelpTitle")).font(.headline)
-                            Text(apps.nameHelpText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                            HStack(spacing: 12) {
-                                Button(L("Apps_Share")) { apps.shareNames() }
-                                Button(L("Apps_Copy")) { apps.copyNames() }.buttonStyle(.link)
-                                Button(apps.showNames ? L("Apps_HelpHide") : L("Apps_HelpShow", lines.named.count + lines.unnamed.count)) {
-                                    apps.showNames.toggle()
-                                }
-                                .buttonStyle(.link)
-                            }
-                            if apps.showNames {
-                                Text(apps.nameList)
-                                    .font(.caption.monospaced())
-                                    .textSelection(.enabled)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(10)
-                                    .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
-                            }
-                        }
-                        Spacer(minLength: 0)
-                    }
+            let outside = apps.outside
+            if !outside.isEmpty {
+                // Apps that didn't come from Google Play, by name
+                VStack(alignment: .leading, spacing: 8) {
+                    Label { Text(L("Apps_Outside", outside.count)).fixedSize(horizontal: false, vertical: true) }
+                        icon: { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange) }
+                    Text(apps.outsideList).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                        .padding(.leading, 26)
+                    Button(L(apps.onlyOutside ? "Apps_ShowAll" : "Apps_ShowOutside")) { apps.onlyOutside.toggle() }
+                        .buttonStyle(.link)
+                        .padding(.leading, 26)
                 }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
             }
             if apps.isLoading { ProgressView().controlSize(.small) }
             if !apps.status.isEmpty { Note(text: apps.status, kind: apps.statusIsError ? .error : .success) }
@@ -101,27 +86,13 @@ private struct AppRowView: View {
                 }
                 Spacer()
                 if row.isProtected { pill(L("Apps_Needed"), .accentColor) }
+                if row.isOutside { pill(L("Apps_NotFromPlay"), .orange) }
                 if row.isOff { pill(L("Apps_Off"), .secondary) }
                 if row.isGone {
                     Label(L(row.goneKey), systemImage: "checkmark.circle.fill").foregroundStyle(.green)
                 } else {
                     menu
                 }
-            }
-            if row.pending == "name" {
-                @Bindable var row = row
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L("Apps_NameText")).fixedSize(horizontal: false, vertical: true)
-                    HStack {
-                        TextField(L("Apps_NameWatermark"), text: $row.nameDraft)
-                            .textFieldStyle(.roundedBorder)
-                            .onSubmit { apps.saveName(row) }
-                        Button(L("Common_Cancel")) { row.pending = "" }
-                        Button(L("Apps_NameSave")) { apps.saveName(row) }.buttonStyle(.borderedProminent)
-                    }
-                }
-                .padding(10)
-                .background(Color.accentColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
             }
             if row.isConfirming {
                 HStack {
@@ -143,7 +114,6 @@ private struct AppRowView: View {
             Button(L("Apps_Open")) { Task { await apps.run(row, "Apps_Opened", UserApps.open) } }.disabled(!row.canOpen)
             Button(L("Apps_ShowInfo")) { Task { await apps.run(row, "Apps_InfoOpened", UserApps.showInfo) } }
             Button(L("Apps_Stop")) { Task { await apps.run(row, "Apps_Stopped", UserApps.stop) } }.disabled(!row.canStop)
-            if row.canName { Button(L("Apps_NameMenu")) { apps.askName(row) } }
             Divider()
             if row.app.isEnabled {
                 Button(L("Apps_TurnOff")) { Task { await apps.setEnabled(row, on: false) } }.disabled(!row.canTurnOff)

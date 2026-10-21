@@ -84,6 +84,12 @@
   <Style Selector="Border.pill.info > TextBlock">
     <Setter Property="Foreground" Value="{DynamicResource AccentFg}" />
   </Style>
+  <Style Selector="Border.pill.warn">
+    <Setter Property="Background" Value="{DynamicResource WarnBg}" />
+  </Style>
+  <Style Selector="Border.pill.warn > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource WarnFg}" />
+  </Style>
   <Style Selector="Border.pill.count">
     <Setter Property="Background" Value="{DynamicResource StepIdleBg}" />
   </Style>

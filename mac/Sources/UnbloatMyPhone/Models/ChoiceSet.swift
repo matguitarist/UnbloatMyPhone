@@ -107,32 +107,4 @@ enum IssueReport {
         repeat { n -= 1; s = make(body(n, packages.count - n)) } while n > 0 && s.count > maxURL
         return (URL(string: s)!, false)
     }
-
-    /// A pre-filled "App names" issue: only package names and the names the user typed. Named lines
-    /// ("package = Name") are ready for tools/add-names.py; bare packages still need a name.
-    @MainActor static func buildNames(_ lines: [String]) -> (url: URL, complete: Bool) {
-        let named = lines.filter { $0.contains(" = ") }.count
-        let unnamed = lines.count - named
-        let title = unnamed == 0 ? "App names (\(named))"
-            : named == 0 ? "Apps without a name (\(unnamed))"
-            : "App names (\(named) named, \(unnamed) without a name)"
-        func body(_ count: Int, _ left: Int) -> String {
-            var b = "Apps the catalog has no name for, sent from UnbloatMyPhone \(AppUpdater.currentVersion).\n"
-            if named > 0 { b += "Lines with \"= Name\" were named by the user.\n" }
-            if unnamed > 0 { b += "The others still need a name: if you know one, add \" = Name\" after it.\n" }
-            b += "```\n" + lines.prefix(count).joined(separator: "\n") + "\n```\n"
-            if left > 0 { b += "…and \(left) more: the full list is on the clipboard, paste it here.\n" }
-            return b
-        }
-        func make(_ body: String) -> String {
-            var c = URLComponents(string: newIssue)!
-            c.queryItems = [URLQueryItem(name: "title", value: title), URLQueryItem(name: "body", value: body)]
-            return c.url!.absoluteString
-        }
-        var s = make(body(lines.count, 0))
-        if s.count <= maxURL { return (URL(string: s)!, true) }
-        var n = lines.count
-        repeat { n -= 1; s = make(body(n, lines.count - n)) } while n > 0 && s.count > maxURL
-        return (URL(string: s)!, false)
-    }
 }
