@@ -104,7 +104,7 @@ Les captures montrent un téléphone et des applications fictifs.
 | | |
 |---|---|
 | **Google Pixel** | La liste complète, testée sur un Pixel 7 Pro et un Pixel 10 Pro XL sous Android 17, profils professionnels compris. |
-| **Samsung Galaxy** | Une première série d'applications Samsung et de composants à garder, testée sur un Galaxy A15 5G sous Android 15. D'autres modèles Galaxy peuvent avoir des applications que la liste ne connaît pas encore. |
+| **Samsung Galaxy** | Une première série d'applications Samsung et de composants à garder, testée sur un Galaxy A15 5G sous Android 15, plus des entrées issues de l'analyse d'un Galaxy Z Flip3. D'autres modèles Galaxy peuvent avoir des applications que la liste ne connaît pas encore. |
 | **Autres téléphones Android** | Les composants Android et Google. Les applications que la liste ne connaît pas sont affichées, et **Les proposer sur GitHub** aide à les ajouter pour tout le monde. |
 
 ## Comment elle reste sûre

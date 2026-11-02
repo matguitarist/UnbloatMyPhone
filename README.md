@@ -95,7 +95,7 @@ The screenshots use a made-up phone and made-up apps.
 | | |
 |---|---|
 | **Google Pixel** | The full list, tested on a Pixel 7 Pro and a Pixel 10 Pro XL on Android 17, work profiles included. |
-| **Samsung Galaxy** | A first set of Samsung apps and parts that must be kept, tested on a Galaxy A15 5G on Android 15. Other Galaxy models may have apps the list doesn't know yet. |
+| **Samsung Galaxy** | A first set of Samsung apps and parts that must be kept, tested on a Galaxy A15 5G on Android 15, plus entries from a scan of a Galaxy Z Flip3. Other Galaxy models may have apps the list doesn't know yet. |
 | **Other Android phones** | The Android and Google parts. Apps the list doesn't know are shown, and **Suggest them on GitHub** helps add them for everyone. |
 
 ## How it stays safe
