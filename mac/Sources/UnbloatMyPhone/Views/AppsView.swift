@@ -20,7 +20,7 @@ struct AppsView: View {
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.banner))
             }
             if apps.isLoading { ProgressView().controlSize(.small) }
             if !apps.status.isEmpty { Note(text: apps.status, kind: apps.statusIsError ? .error : .success) }
@@ -72,11 +72,11 @@ private struct AppRowView: View {
                     if let icon = row.icon {
                         Image(nsImage: icon).resizable().interpolation(.high)
                     } else {
-                        RoundedRectangle(cornerRadius: 8).fill(.quaternary)
+                        RoundedRectangle(cornerRadius: Radius.control).fill(.quaternary)
                     }
                 }
                 .frame(width: 36, height: 36)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.control))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(row.name).lineLimit(1).truncationMode(.middle)
                     if row.hasFriendlyName {
@@ -104,7 +104,7 @@ private struct AppRowView: View {
                         .buttonStyle(.borderedProminent)
                 }
                 .padding(10)
-                .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.banner))
             }
         }
     }

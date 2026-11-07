@@ -159,7 +159,7 @@ struct FlashView: View {
             Button(L("Flash_Confirm")) { flash.confirm() }.buttonStyle(.borderedProminent)
         }
         .padding(10)
-        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.banner))
     }
 
     private func fact(_ label: String, _ value: String) -> some View {

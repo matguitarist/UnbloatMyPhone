@@ -39,7 +39,7 @@ struct PhoneInfoView: View {
                                 .buttonStyle(.borderedProminent)
                         }
                         .padding(10)
-                        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.banner))
                     }
                     restartRow("normal", L("Info_RestartNormal"), L("Info_RestartNormalText"))
                     restartRow("recovery", L("Info_RestartRecovery"), L("Info_RestartRecoveryText"))
