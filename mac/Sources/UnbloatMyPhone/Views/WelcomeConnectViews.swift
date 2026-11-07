@@ -159,6 +159,6 @@ struct ConnectView: View {
             }
         }
         .padding(8)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: Radius.control))
     }
 }

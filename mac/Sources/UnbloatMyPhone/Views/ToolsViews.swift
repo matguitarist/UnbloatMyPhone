@@ -88,8 +88,8 @@ struct InstallView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(36)
-            .background(targeted ? Color.accentColor.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
+            .background(targeted ? Color.accentColor.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: Radius.card))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
                 .foregroundStyle(targeted ? Color.accentColor : Color.secondary.opacity(0.5)))
             .dropDestination(for: URL.self) { urls, _ in
                 guard let url = urls.first else { return false }
